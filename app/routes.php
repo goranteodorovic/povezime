@@ -26,11 +26,7 @@ $app->post('/ride/search', 'SearchController:rideSearch');
 $app->post('/ride/request/all', 'RideRequestController:getAllRequests');
 $app->post('/ride/request/cancel', 'RideRequestController:cancelRequest');
 
-
 $app->post('/offer/ride/request', 'RideRequestController:offerRideRequest');
-
 $app->post('/offer/ride/answer', 'RideRequestController:offerRideAnswer');
-
 $app->post('/search/ride/request', 'RideRequestController:searchRideRequest');
-
 $app->post('/search/ride/answer', 'RideRequestController:searchRideAnswer');
