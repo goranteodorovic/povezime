@@ -11,24 +11,22 @@ Class Common extends Model {
 	protected $table;
 
 	public static function getAllByUserId($user_id){
+		
 		$records = self::where('user_id', $user_id)->get();
-		$collection = collect($records);
 
-		foreach($collection as $record){
-			$each = (object)[];
+		foreach ($records as $first_key => $record) {
 
-			foreach($record as $key => $value){
-				if($key != 'created_at' && $key != 'updated_at' && $key != 'user_id')
-					$each->$key = $value;
-			}
+			if (isset($record->user_id))
+				unset($record->user_id);
 
-			$response[] = $each;
+			unset($record->created_at, $record->updated_at);
 		}
 
-		return isset($response) ? $response : false;
+		return !empty($records) ? $records : false;
 	}
 
 	public function updateRecord($params){
+
 		if (isset($params['id'])) { unset($params['id']); }
 		$collection = collect($this);
 
@@ -49,6 +47,7 @@ Class Common extends Model {
 	}
 
 	public function deleteRecord(){
+
 		$id = $this->id;
 		$record_name = class_basename($this);
 

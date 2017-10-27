@@ -15,7 +15,7 @@ Class User extends Common {
 		if($user->name && $user->surname)
 			return $user->name.' '.$user->surname;
 
-		elseif($user->email){
+		elseif($user->email)
 			return $user->email;
 			
 		else return false;
