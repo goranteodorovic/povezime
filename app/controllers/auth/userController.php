@@ -32,7 +32,7 @@ Class UserController extends Controller {
 			if(!$reg->id)
 				displayMessage('Spremanje reg id-a neuspješno.');
 		} else {
-			if($found_reg->email != $user->email)
+			if($found_reg->user_id != $user->id)
 				displayMessage('Registracija nije dozvoljena.');
 		}
 
