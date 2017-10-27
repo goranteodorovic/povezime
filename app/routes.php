@@ -23,7 +23,8 @@ $app->post('/ride/search', 'SearchController:rideSearch');
 
 /*-----------------------------------------------------*/
 /* Requests */
-$app->post('/ride/requests', 'RideRequestController:getAllRequests');	//
+$app->post('/ride/request/all', 'RideRequestController:getAllRequests');
+$app->post('/ride/request/cancel', 'RideRequestController:cancelRequest');
 
 
 $app->post('/offer/ride/request', 'RideRequestController:offerRideRequest');
