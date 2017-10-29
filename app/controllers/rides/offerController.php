@@ -14,6 +14,7 @@ use App\Models\Search;
 
 Class OfferController extends Controller {
 
+	// 29.10
 	public function rideOffer($request, $response){
 	// 	required: user_id, route, car_id, seats, date, time, luggage
 		$params = $request->getParams();
@@ -23,93 +24,190 @@ Class OfferController extends Controller {
 		$params['seats_start'] = $params['seats'];
 		$response = array();
 
+		$offer = (object)[];
+		$offer->id = 99;
+		foreach($params as $key => $value){
+			$offer->$key = $value;
+		}
+
 		// insert offer into database
-		$offer = Offer::create($params);
+		/*$offer = Offer::create($params);
 		if(!$offer->id)
 			displayMessage('Spremanje ponude neuspješno.');
-		unset($offer->created_at, $offer->updated_at);
+		unset($offer->created_at, $offer->updated_at);*/
 
 		// check for searches
-		$offer_route_arr = explode(" - ", $offer->route);
+		$searches = $this->checkSearches($offer);
+		if (!$searches)
+			displayMessage('Nema podudaranja u potražnji', 1);
 
-		$plus_one = date('Y-m-d', strtotime("+1 day", strtotime($offer->date)));
-		$minus_one = date('Y-m-d', strtotime("-1 day", strtotime($offer->date)));
-
-		// filter by seats, partly-date
-		$searches = Search::select('id', 'user_id', 'from', 'to', 'date', 'one_day', 'seats', 'luggage')
-		->where('seats', '>', 0)
-		->where('seats', '<=', $offer->seats)
-		->whereBetween('date', [$minus_one, $plus_one]);
-		if($offer->luggage == 0){ $searches = $searches->where('luggage', 0); }
-		$searches = $searches->get();
-
-		$search_regs = array();		// regs to send  notifications to
-
-		foreach ($searches as $index => $search) {
-			if ($search->one_day == 0 && $offer->date != $search->date)
-				unset($searches[$index]);
-
-			// lat long of search object
-			$from_lat = substr($search->from, 0, strpos($search->from, ','));
-			$from_long = substr($search->from, strpos($search->from, ',')+1);
-
-			$to_lat = substr($search->to, 0, strpos($search->to, ','));
-			$to_long = substr($search->to, strpos($search->to, ',')+1);
-
-			$from = null;		// closest place from SEARCH->FROM to offer route array
-            $to = null;			// closest place from SEARCH->TO to offer route array
-
-            // get distances between each latlong and offer from/to latlong
-			foreach ($offer_route_arr as $latlong) {
-				$lat = substr($latlong, 0, strpos($latlong, ','));
-				$long = substr($latlong, strpos($latlong, ',')+1);
-
-				$distance_from = getDistance($from_lat, $from_long, $lat, $long);
-				$distance_to = getDistance($to_lat, $to_long, $lat, $long);
-
-				if($distance_from < 5)	{	$from = $latlong;	}
-				if($distance_to < 5)	{	$to = $latlong;		}
-			}
-
-			// filter result on saved latlong and direction
-			if(!isset($from) || !isset($to) || strpos($offer->route, $from) > strpos($offer->route, $to)){
-				unset($searches[$index]);
-			} else {
-				// set data to return
-				$user = User::select('id', 'name', 'surname', 'email', 'phone')
-				->where('id', $search->user_id)->first();
-				$response_search['user'] = $user;
-
-				unset($search->user_id);
-				$search->from = getCityName($search->from);
-				$search->to = getCityName($search->to);
-				$response_search['route'] = $search;
-				// get regs for notifications
-				$search_regs = array_merge($search_regs, Reg::where('user_id', $user->id)->pluck('reg_id')->all());
-
-				$response['searches'][] = $response_search;
-			}
-		}
-
-		if (count($searches) == 0 ) {
-			$response['message'] = 'Nema podudaranja u potražnji';
-			exit(json_encode($response, JSON_UNESCAPED_UNICODE));
-		}
-
-		// notifications to searchers
+		// notification to searches
 		$title = 'Ponuda prevoza';
-		$message = User::fullName($offer->user_id).' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
+		$user = User::fullName($offer->user_id);
+		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
+		$fb_response = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
 		$response['firebase'] = $fb_response;
 
+		// response to offerer
+		$response['regs'] = $searches['regs'];
+		$response['searches'] = $searches['searches'];
+
+		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		/*
+		RESPONSE
+		{"firebase":{"payload":{"user":"Marko Marković","car":"Ford Focus ST", "route":{"id":99,"seats":"2","date":"27.Oct.2017.","time":"13:00","luggage":"1","from":"Brčko","to":"Banja Luka"}},
+		"response":"{\"multicast_id\":6273839410365308174,\"success\":0,\"failure\":1,\"canonical_ids\":0,\"results\":[{\"error\":\"InvalidRegistration\"}]}"},
+		"regs":["1234567890"],
+		"searches":[{"id":1,"user_id":2,"from":"Obudovac","to":"Derventa","date":"26.Oct.2017.","one_day":1,"seats":1,"luggage":1,"user":"Petar Petrović"}]}
+		*/
+	}
+
+	// 28.10.
+	public function cancelOffer($request, $response){
+	// 	required: id
+		$params = $request->getParams();
+		$required = ['id'];
+		checkRequiredFields($required, $params);
+
+		// get all objects to work with
+		$offer = offer::find($params['id']);
+		if (!$offer)
+			displayMessage('Pogrešan id...');
+		
+		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
+
+		$response = array();
+		$search_regs = array();
+
+		foreach ($ride_requests as $rideRequest) {
+
+			if ($rideRequest->answer == 'accepted') {
+				// uppdate search
+				$search = Search::find($rideRequest->search_id);
+				if (!$search->updateRecord(['seats' => $search->seats_start]))
+					displayMessage('Izmjena potražnje neuspješna.');
+
+				$search_regs = array_merge($search_regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
+			}
+
+			$rideRequest->deleteRecord();
+		}
+
+		$user = User::fullName($offer->user_id);
+
+		$offer->deleteRecord();
+
+		if (count($search_regs) > 0) {
+			// notifications to searchers
+			$title = 'Brisanje ponude prevoza';
+			$message = $user.' je obrisao prevoz. Potražite novi!';
+			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
+			$response['firebase'] = $fb_response;
+		}	
+
+		$response['success'] = 1;
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 	}
 
-	public function cancelOffer($request, $response){
-		//
+	public function updateOffer($request, $response){
+	//  required: id
+	//  optional: user_id, route, car_id, seats, date, time, luggage
+		$params = $request->getParams();
+		$required = ['id'];
+		checkRequiredFields($required, $params);
+
+		$response = array();
+
+		// get all objects/array of objects to work with
+		$offer = offer::find($params['id']);
+		if (!$offer)
+			displayMessage('Pogrešan id...');
+
+		$user = User::fullName($offer->user_id);
+
+		$search_regs_for_deleted_requests = array();
+
+		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
+		
+		if ($ride_requests) {
+		// cancel requests
+			foreach ($ride_requests as $rideRequest) {
+
+				if ($rideRequest->answer == 'accepted') {
+					// uppdate search
+					$search = Search::find($rideRequest->search_id);
+					if (!$search->updateRecord(['seats' => $search->seats_start]))
+						displayMessage('Izmjena potražnje neuspješna.');
+
+					$search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
+				}
+
+				$rideRequest->deleteRecord();
+			}
+		}
+
+		
+
+		if (!empty($search_regs_for_deleted_requests)) {
+			$title = 'Izmjena ponude prevoza';
+			$message = $user.' je izmijenio ponudu prevoza. Provjerite da li vam isti odgovara ili potražite novi!';
+			$fb_response = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
+			$response['firebase']['deleted_requests'] = $fb_response;
+		}
+
+		// update offer
+		if (isset($params['seats']))
+			$params['seats_start'] = $params['seats'];
+
+		if (!$offer->updateRecord($params))
+			displayMessage('Izmjena potražnje neuspješna.');
+
+		// check matched searches
+		$searches = $this->checkSearches($offer);
+		if (!$searches)
+			displayMessage('Nema podudaranja u potražnji', 1);
+
+		// notification to searches
+		$title = 'Izmjena ponude prevoza';
+		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
+		$fb_response = sendNotifications($title, $message, $searches['search_regs'], $offer, 'offer');
+		$response['firebase']['changed_offer'] = $fb_response;
+
+		// response to offerer
+		$response['searches'] = $searches;
+		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 	}
 
-	public function updateOffer($request, $response){
-		//
+
+	public function checkSearches($offer){
+
+		$response = array();
+
+		$searches = Search::getMatches($offer);
+		if (!$searches)
+			displayMessage('Nema podudaranja u potražnji', 1);
+
+		$regs = array();
+
+		foreach ($searches as $search) {
+			$search->user = User::fullName($search->user_id);
+			$search->from = getCityName($search->from);
+			$search->to = getCityName($search->to);
+			$search->date = date('d.M.Y.', strtotime($search->date));
+
+			$response['searches'][] = $search;
+
+			// get regs for notifications
+			$regs = array_merge($regs, Reg::where('user_id', $search->id)->pluck('reg_id')->all());
+		}
+
+		if (empty($regs))
+			return false;
+ 		else {
+
+ 			$response['regs'] = $regs;
+			return $response;
+ 		}
 	}
+
 }
