@@ -105,54 +105,11 @@ Class OfferController extends Controller {
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 	}
 
-	// 28.10.
 	public function cancelOffer($request, $response){
-	// 	required: id
-		$params = $request->getParams();
-		$required = ['id'];
-		checkRequiredFields($required, $params);
-
-		// get all objects to work with
-		$offer = offer::find($params['id']);
-		if (!$offer)
-			displayMessage('Pogrešan id...');
-		
-		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
-
-		$response = array();
-		$search_regs = array();
-
-		foreach ($ride_requests as $rideRequest) {
-
-			if ($rideRequest->answer == 'accepted') {
-				// uppdate search
-				$search = Search::find($rideRequest->search_id);
-				if (!$search->updateRecord(['seats' => $search->seats_start]))
-					displayMessage('Izmjena potražnje neuspješna.');
-
-				$search_regs = array_merge($search_regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
-			}
-
-			$rideRequest->deleteRecord();
-		}
-
-		$user = User::fullName($offer->user_id);
-
-		$offer->deleteRecord();
-
-		if (count($search_regs) > 0) {
-			// notifications to searchers
-			$title = 'Brisanje ponude prevoza';
-			$message = $user.' je obrisao prevoz. Potražite novi!';
-			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-			$response['firebase'] = $fb_response;
-		}	
-
-		$response['success'] = 1;
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		//
 	}
 
 	public function updateOffer($request, $response){
-		
+		//
 	}
 }
