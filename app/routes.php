@@ -16,10 +16,12 @@ $app->post('/car/delete', 'CarController:delete');
 /*-----------------------------------------------------*/
 /* Ride Offers */
 $app->post('/ride/offer', 'OfferController:rideOffer');
+//$app->post('/ride/offer/cancel', 'OfferController:cancelOffer');
 
 /*-----------------------------------------------------*/
 /* Ride Searches */
 $app->post('/ride/search', 'SearchController:rideSearch');
+//$app->post('/ride/search/cancel', 'SearchController:cancelSearch');
 
 /*-----------------------------------------------------*/
 /* Requests */

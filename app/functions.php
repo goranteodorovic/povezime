@@ -103,7 +103,7 @@ function getCityName($latlng){
 			$cityName = $result->address_components[0]->long_name;
 	}
 
-	if (isset($cityName))
+	if (isset($cityName) && !is_null($cityName))
 		return $cityName;
 	else 
 		getCityName($latlng);
