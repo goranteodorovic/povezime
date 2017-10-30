@@ -34,15 +34,24 @@ Class CarController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
+		$response = ['success' => 1];
+
 		$car = Car::find($params['id']);
 		if(!$car)
 			displayMessage('Traženi automobil ne postoji u bazi.');
 
-		$updated = $car->updateRecord($params);
-		if (!$updated)
-		 	displayMessage('Izmjena podataka neuspješna.');
+		$car->updateRecord($params);
+		$response['record'] = Car::find($params['id']);
+		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-		echo json_encode($updated, JSON_UNESCAPED_UNICODE);
+		/*
+		if success
+			success: 1
+			record
+		else
+			success: 0
+			message...
+		*/
 	}
 
 	public function delete($request, $response){
@@ -51,14 +60,24 @@ Class CarController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
+		$response = ['success' => 1];
+
 		$car = Car::find($params['id']);
 		if(!$car)
 			displayMessage('Traženi automobil ne postoji u bazi.');
 
-		if ($car->deleteRecord())
-			echo '{"success":1}';
+		if (!$car->deleteRecord())
+			displayMessage('Došlo je do greške...');
+
+		return json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
 		else
-			echo '{"success":0, "message":"Došlo je do greške..."}';
+			success: 0
+			message...
+		*/
 	}
 
 }

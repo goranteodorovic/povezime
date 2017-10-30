@@ -25,6 +25,8 @@ Class UserController extends Controller {
 		} else
 			$user_id = $user->id;
 
+		$response = ['success' => 1];
+
 		// inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
 		if(!$found_reg){
@@ -35,9 +37,6 @@ Class UserController extends Controller {
 			if($found_reg->user_id != $user->id)
 				displayMessage('Registracija nije dozvoljena.');
 		}
-
-		// creating response
-		$response = array();
 
 		$collection = collect($user);
 		foreach($collection as $key => $value){
@@ -61,18 +60,24 @@ Class UserController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
+		$response = ['success' => 1];
 
 		$user = User::find($params['id']);
 		if(!$user)
 			displayMessage('Pogrešan id.');
 
-		$updated = $user->updateRecord($params);
-		if(!$updated)
-			displayMessage('Izmjena podataka neuspješna.');
+		$user->updateRecord($params);
+		$response['record'] = User::find($params['id']);
+		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-		unset($updated->created_at, $updated->updated_at);
-		echo json_encode($updated, JSON_UNESCAPED_UNICODE);
+		/*
+		if success
+			success: 1
+			record
+		else
+			success: 0
+			messsage
+		*/
 	}
 
 	public function delete($request, $response){
