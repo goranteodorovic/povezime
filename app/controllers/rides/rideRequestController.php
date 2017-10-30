@@ -15,18 +15,18 @@ use App\Models\RideRequest;
 
 Class RideRequestController extends Controller {
 
+	// 30.10.
 	public function getAllRequests($request, $response){
 	//	required: user_id
 		$params = $request->getParams();
 		$required = ['user_id'];
 		checkRequiredFields($required, $params);
 
-		$ride_requests = RideRequest::getAllByUserId($params['user_id']);
-		if (!isset($ride_requests) || count($ride_requests) == 0) {
-			displayMessage('Nema rezultata.');
-		}
+		$response = ['success' => 1];
 
-		$response = array();
+		$ride_requests = RideRequest::getAllByUserId($params['user_id']);
+		if (!isset($ride_requests) || count($ride_requests) == 0)
+			displayMessage('Nema zabilježenih zahtjeva.', 1);
 
 		foreach ($ride_requests as $key => $rideRequest) {
 
@@ -47,62 +47,51 @@ Class RideRequestController extends Controller {
 		}
 
 		echo json_encode($ride_requests, JSON_UNESCAPED_UNICODE);
+		/*
+		if success
+			success: 1
+			if no matches => message
+			ride_requests (array of objects)
+		else
+			success: 0
+			message: ...
+		*/
 	}
 
-	// cancel ride request
+	// 30.10.
 	public function cancelRequest($request, $response){
 	//	required: id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		// get all objects to work with
+		$response = ['success' => 1];
+
 		$rideRequest = RideRequest::find($params['id']);
-		if (!$rideRequest) {
+		if (!$rideRequest)
 			displayMessage('Pogrešan id...');
-		}
-		
-		$type = $rideRequest->type;
-		$answer = $rideRequest->answer;
 
-		$search = Search::where('id', $rideRequest->search_id)->first();
-		$offer = Offer::where('id', $rideRequest->offer_id)->first();
-		if (!$search || !$offer) {
-			displayMessage('Došlo je do greške... Ponuda/Potražnja ne postoji u bazi.');
-		}
+		$delete_request = $rideRequest->deleteRequest();
 
-		if ($answer == 'accepted') {
-			// update seats in search and offer tables
-			if (!$search->updateRecord(['seats' => $search->seats_start])) {
-				displayMessage('Izmjena ponude neuspješna.');
-			}
+		if ($delete_request['success'] == 0)
+			displayMessage('Brisanje zahtjeva neuspješno!');
 
-			if (!$offer->updateRecord(['seats' => $offer->seats + $search->seats_start])) {
-				displayMessage('Izmjena ponude neuspješna.');
-			}
-		}
-
-		$rideRequest->deleteRecord();
-
-		$response = array();
-
-		if ($answer != 'denied') {
-			// send notification
+		if ($delete_request['regs']) {
 			$title = 'Otkazivanje zahtjeva';
-			$message = User::fullName($rideRequest->user_id).' je otkazao zahtjev za prevoz.';
-			if ($type == 'search') {
-				$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-				$fb_response = sendNotifications($title, $message, $offer_regs, $search, 'search');
-			} else {
-				$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-				$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-			}
-
+			$message = $delete_request['user'].' je otkazao zahtjev za prevoz.';
+			$fb_response = sendNotifications($title, $message, $delete_request['regs'], $delete_request['object'], $delete_request['type']);
 			$response['firebase'] = $fb_response;
 		}
-
-		$response['success'] = 1;
+		
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		/*
+		if success
+			success: 1
+			firebase (if regs)	
+		else
+			success: 0
+			message...
+		*/
 	}
 
 	// ride offer request
@@ -112,29 +101,26 @@ Class RideRequestController extends Controller {
 		$required = ['user_id', 'search_id', 'offer_id'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
+		$response = ['success' => 1];
 
 		// find objects to work with
 		$user = User::find($params['user_id']);
 		$search = Search::find($params['search_id']);
 		$offer = Offer::find($params['offer_id']);
-		if (!$user || !$search || !$offer) {
-			displayMessage('Zahtjev nije moguć. Provjerite korisnika, ponudu i potražnju!');
-		}
+		if (!$user || !$search || !$offer)
+			displayMessage('Došlo je do greške... Provjerite korisnika, ponudu i potražnju!');
 
 		// check if searches still needs a ride
-		if ($search->seats == 0) {
-			displayMessage('Zahtjev nije moguć. Provjerite mjesta ponude i potražnje!');
-		}
+		if ($search->seats == 0)
+			displayMessage('Došlo je do greške... Provjerite mjesta ponude i potražnje!');
 
 		// save request
 		$params['type'] = 'offer';
 		$params['answer'] = 'pending';
 
 		$rideRequest = RideRequest::create($params);
-		if (!$rideRequest) {
+		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!');
-		}
 
 		// send notification to searcher
 		$title = 'Zahtjev/ponuda prevoza';
@@ -145,6 +131,16 @@ Class RideRequestController extends Controller {
 
 		$response['request'] = $rideRequest;
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success:	1
+			request
+			firebase
+		else
+			success:	0
+			message:	...
+		*/
 	}
 
 	// answer to ride offer
@@ -154,23 +150,20 @@ Class RideRequestController extends Controller {
 		$required = ['id', 'user_id', 'answer'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
+		$response = ['success' => 1];
 
 		// find objects to work with
 		$rideRequest = RideRequest::find($params['id']);
-		if (!$rideRequest) {
+		if (!$rideRequest)
 			displayMessage('Došlo je do greške... Pogrešan id!');
-		}
 
 		$user = User::find($params['user_id']);
 		$search = Search::find($rideRequest->search_id);
 		$offer = Offer::find($rideRequest->offer_id);
-		if (!$user || !$search || !$offer) { 
+		if (!$user || !$search || !$offer)
 			displayMessage('Došlo je do greške... Provjerite korisnika, ponudu i potražnju!'); 
-		}
 
 		if ($params['answer'] == 0) {
-
 			$request_answer = 'denied';
 			$fb_msg = 'odbio(la)';
 		} else {
@@ -179,15 +172,8 @@ Class RideRequestController extends Controller {
 				$response_msg = 'Zahtjev više nije dostupan!';
 				$rideRequest->answer = 'denied';
 			} else {
-				// update offer
-				$offer_seats = $offer->seats - $search->seats;
-				if (!$offer->updateRecord(['seats' => $offer_seats])) {
-					displayMessage('Izmjena ponude neuspješna.');
-				}
-				// update search
-				if (!$search->updateRecord(['seats' => 0])) {
-					displayMessage('Izmjena potražnje neuspješna.');
-				}
+				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
+				$search->updateRecord(['seats' => 0]);
 
 				$request_answer = 'accepted';
 				$fb_msg = 'prihvatio(la)';
@@ -195,9 +181,7 @@ Class RideRequestController extends Controller {
 		}
 
 		// update riderequest
-		if (!$rideRequest->updateRecord(['answer' => $request_answer])) {
-			displayMessage('Izmjena zahtjeva neuspješna.');
-		}
+		$rideRequest->updateRecord(['answer' => $request_answer]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na ponuda prevoza';
@@ -209,6 +193,16 @@ Class RideRequestController extends Controller {
 
 		$response['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			message...
+			firebase
+		else
+			success: 0
+			message...
+		*/
 	}
 
 	public function searchRideRequest($request, $response){
@@ -217,40 +211,46 @@ Class RideRequestController extends Controller {
 		$required = ['user_id', 'search_id', 'offer_id'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
+		$response = ['success' => 1];
 
 		// find objects to work with
 		$user = User::find($params['user_id']);
 		$search = Search::find($params['search_id']);
 		$offer = Offer::find($params['offer_id']);
-		if (!$user || !$search || !$offer) {
+		if (!$user || !$search || !$offer)
 			displayMessage('Došlo je do greške... Provjerite korisnika, ponudu i potražnju!');
-		}
 
 		// check if searches still needs a ride
-		if ($search->seats == 0 || $offer->seats < $search->seats) {
-			displayMessage('Zahtjev nije moguć. Provjerite mjesta ponude i potražnje!');
-		}
+		if ($search->seats == 0 || $offer->seats < $search->seats)
+			displayMessage('Došlo je do greške... Provjerite mjesta ponude i potražnje!');
 
 		// save request
 		$params['type'] = 'search';
 		$params['answer'] = 'pending';
 
 		$rideRequest = RideRequest::create($params);
-		if (!$rideRequest) {
+		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!');
-		}
 
 		// send notification to searcher
 		$title = 'Zahtjev/potražnja prevoza';
 		$message = User::fullName($user->id).' potražuje prevoz.';
-		
 		$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
 		$fb_response = sendNotifications($title, $message, $offer_regs, $search, 'search');
 		$response['firebase'] = $fb_response;
 
 		$response['request'] = $rideRequest;
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success:	1
+			request
+			firebase
+		else
+			success:	0
+			message:	...
+		*/
 	}
 
 	public function searchRideAnswer($request, $response){
@@ -259,23 +259,20 @@ Class RideRequestController extends Controller {
 		$required = ['id', 'user_id', 'answer'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
+		$response = ['success' => 1];
 
 		// find objects to work with
 		$rideRequest = RideRequest::find($params['id']);
-		if (!$rideRequest) {
+		if (!$rideRequest)
 			displayMessage('Došlo je do greške... Pogrešan id!');
-		}
 
 		$user = User::find($params['user_id']);
 		$search = Search::find($rideRequest->search_id);
 		$offer = Offer::find($rideRequest->offer_id);
-		if (!$user || !$search || !$offer) { 
+		if (!$user || !$search || !$offer)
 			displayMessage('Došlo je do greške... Provjerite korisnika, ponudu i potražnju!'); 
-		}
 
 		if ($params['answer'] == 0) {
-
 			$request_answer = 'denied';
 			$fb_msg = 'odbio(la)';
 		} else {
@@ -284,15 +281,8 @@ Class RideRequestController extends Controller {
 				$response_msg = 'Zahtjev više nije dostupan!';
 				$rideRequest->answer = 'denied';
 			} else {
-				// update offer
-				$offer_seats = $offer->seats - $search->seats;
-				if (!$offer->updateRecord(['seats' => $offer_seats])) {
-					displayMessage('Izmjena ponude neuspješna.');
-				}
-				// update search
-				if (!$search->updateRecord(['seats' => 0])) {
-					displayMessage('Izmjena potražnje neuspješna.');
-				}
+				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
+				$search->updateRecord(['seats' => 0]);
 
 				$request_answer = 'accepted';
 				$fb_msg = 'prihvatio(la)';
@@ -300,15 +290,11 @@ Class RideRequestController extends Controller {
 		}
 
 		// update riderequest
-		if (!$rideRequest->updateRecord(['answer' => $request_answer])) {
-			displayMessage('Izmjena zahtjeva neuspješna.');
-		}
+		$rideRequest->updateRecord(['answer' => $request_answer]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na potražnju prevoza';
-
 			$message = User::fullName($offer->user_id).' je '.$fb_msg.' vaš zahtjev za potražnju prevoza.';
-
 			$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
 			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
 			$response['firebase'] = $fb_response;
@@ -316,6 +302,16 @@ Class RideRequestController extends Controller {
 
 		$response['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			message...
+			firebase
+		else
+			success: 0
+			message...
+		*/
 	}
 
 }

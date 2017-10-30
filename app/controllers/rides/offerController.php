@@ -11,10 +11,10 @@ use App\Models\Reg;
 use App\Models\Car;
 use App\Models\Offer;
 use App\Models\Search;
+use App\Models\RideRequest;
 
 Class OfferController extends Controller {
 
-	// 29.10
 	public function rideOffer($request, $response){
 	// 	required: user_id, route, car_id, seats, date, time, luggage
 		$params = $request->getParams();
@@ -22,22 +22,19 @@ Class OfferController extends Controller {
 		checkRequiredFields($required, $params);
 
 		$params['seats_start'] = $params['seats'];
-		$response = array();
+		$response = ['success' => 1];
 
-		$offer = (object)[];
-		$offer->id = 99;
-		foreach($params as $key => $value){
-			$offer->$key = $value;
-		}
+		$route_array = explode(' - ', $params['route']);
+		$params['description'] = getCityName($route_array[0]).' - '.getCityName(end($route_array));
 
 		// insert offer into database
-		/*$offer = Offer::create($params);
+		$offer = Offer::create($params);
 		if(!$offer->id)
 			displayMessage('Spremanje ponude neuspješno.');
-		unset($offer->created_at, $offer->updated_at);*/
+		unset($offer->created_at, $offer->updated_at);
 
 		// check for searches
-		$searches = $this->checkSearches($offer);
+		$searches = $this->getSearchMatches($offer);
 		if (!$searches)
 			displayMessage('Nema podudaranja u potražnji', 1);
 
@@ -53,16 +50,21 @@ Class OfferController extends Controller {
 		$response['searches'] = $searches['searches'];
 
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
 		/*
-		RESPONSE
-		{"firebase":{"payload":{"user":"Marko Marković","car":"Ford Focus ST", "route":{"id":99,"seats":"2","date":"27.Oct.2017.","time":"13:00","luggage":"1","from":"Brčko","to":"Banja Luka"}},
-		"response":"{\"multicast_id\":6273839410365308174,\"success\":0,\"failure\":1,\"canonical_ids\":0,\"results\":[{\"error\":\"InvalidRegistration\"}]}"},
-		"regs":["1234567890"],
-		"searches":[{"id":1,"user_id":2,"from":"Obudovac","to":"Derventa","date":"26.Oct.2017.","one_day":1,"seats":1,"luggage":1,"user":"Petar Petrović"}]}
+		if success
+			success: 1
+			if no matches => message
+			regs
+			searches (array of obj)
+			firebase
+		else
+			success: 0
+			message...
+
 		*/
 	}
 
-	// 28.10.
 	public function cancelOffer($request, $response){
 	// 	required: id
 		$params = $request->getParams();
@@ -74,26 +76,18 @@ Class OfferController extends Controller {
 		if (!$offer)
 			displayMessage('Pogrešan id...');
 		
+		$user = User::fullName($offer->user_id);
 		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
 
-		$response = array();
+		$response['success'] = 1;
 		$search_regs = array();
 
 		foreach ($ride_requests as $rideRequest) {
+			$delete_request = $rideRequest->deleteRequest();
 
-			if ($rideRequest->answer == 'accepted') {
-				// uppdate search
-				$search = Search::find($rideRequest->search_id);
-				if (!$search->updateRecord(['seats' => $search->seats_start]))
-					displayMessage('Izmjena potražnje neuspješna.');
-
-				$search_regs = array_merge($search_regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
-			}
-
-			$rideRequest->deleteRecord();
+			if (isset($delete_request['regs']))
+				$search_regs = array_merge($search_regs, $delete_request['regs']);
 		}
-
-		$user = User::fullName($offer->user_id);
 
 		$offer->deleteRecord();
 
@@ -105,10 +99,19 @@ Class OfferController extends Controller {
 			$response['firebase'] = $fb_response;
 		}	
 
-		$response['success'] = 1;
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			if reqs => firebase
+		else
+			success: 0
+			message...
+		*/
 	}
 
+	// 30.10.
 	public function updateOffer($request, $response){
 	//  required: id
 	//  optional: user_id, route, car_id, seats, date, time, luggage
@@ -116,77 +119,71 @@ Class OfferController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = array();
-
 		// get all objects/array of objects to work with
 		$offer = offer::find($params['id']);
 		if (!$offer)
 			displayMessage('Pogrešan id...');
 
-		$user = User::fullName($offer->user_id);
-
-		$search_regs_for_deleted_requests = array();
-
-		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
-		
-		if ($ride_requests) {
-		// cancel requests
-			foreach ($ride_requests as $rideRequest) {
-
-				if ($rideRequest->answer == 'accepted') {
-					// uppdate search
-					$search = Search::find($rideRequest->search_id);
-					if (!$search->updateRecord(['seats' => $search->seats_start]))
-						displayMessage('Izmjena potražnje neuspješna.');
-
-					$search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
-				}
-
-				$rideRequest->deleteRecord();
-			}
+		if (isset($params['route'])) {
+			$route_array = explode(' - ', $params['route']);
+			$params['description'] = getCityName($route_array[0]).' - '.getCityName(end($route_array));
 		}
 
+		$user = User::fullName($offer->user_id);
+		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
+
+		$response = ['success' => 1];
+		$search_regs_for_deleted_requests = array();
 		
+		foreach ($ride_requests as $rideRequest) {
+			$delete_request = $rideRequest->deleteRequest();
+
+			if (isset($delete_request['regs']))
+				$search_regs_for_deleted_requests = array_merge($$search_regs_for_deleted_requests, $delete_request['regs']);
+		}
 
 		if (!empty($search_regs_for_deleted_requests)) {
 			$title = 'Izmjena ponude prevoza';
 			$message = $user.' je izmijenio ponudu prevoza. Provjerite da li vam isti odgovara ili potražite novi!';
 			$fb_response = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
-			$response['firebase']['deleted_requests'] = $fb_response;
+			$response['firebase']['delete'] = $fb_response;
 		}
 
 		// update offer
 		if (isset($params['seats']))
 			$params['seats_start'] = $params['seats'];
 
-		if (!$offer->updateRecord($params))
-			displayMessage('Izmjena potražnje neuspješna.');
+		$offer->updateRecord($params);
 
 		// check matched searches
-		$searches = $this->checkSearches($offer);
+		$searches = $this->getSearchMatches($offer);
 		if (!$searches)
 			displayMessage('Nema podudaranja u potražnji', 1);
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		$fb_response = sendNotifications($title, $message, $searches['search_regs'], $offer, 'offer');
-		$response['firebase']['changed_offer'] = $fb_response;
+		$fb_response = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
+		$response['firebase']['update'] = $fb_response;
 
 		// response to offerer
-		$response['searches'] = $searches;
+		$response['searches'] = $searches['searches'];
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			if search matches 	=> searches
+								=> firebase['update']
+			if deleted requests => firebase['delete']
+		*/
 	}
 
 
-	public function checkSearches($offer){
-
-		$response = array();
+	public function getSearchMatches($offer){
+		$response = ['success' => 1];
 
 		$searches = Search::getMatches($offer);
-		if (!$searches)
-			displayMessage('Nema podudaranja u potražnji', 1);
-
 		$regs = array();
 
 		foreach ($searches as $search) {
@@ -201,13 +198,11 @@ Class OfferController extends Controller {
 			$regs = array_merge($regs, Reg::where('user_id', $search->id)->pluck('reg_id')->all());
 		}
 
-		if (empty($regs))
+		if (empty($regs)) {
 			return false;
- 		else {
-
+		} else {
  			$response['regs'] = $regs;
 			return $response;
  		}
 	}
-
 }
