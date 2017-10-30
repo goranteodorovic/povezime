@@ -35,17 +35,12 @@ function sendNotifications($title, $message, $reg_ids, $object, $type){
 	unset($route->user_id, $route->seats_start, $route->created_at, $route->updated_at);
 
 	if($type == 'offer'){
-		$route_array = explode(' - ', $object->route);
-		$route->from = getCityName($route_array[0]);
-		$route->to = getCityName(end($route_array));
 		$route->time = substr($object->time, 0, 5);
 		unset($route->route, $route->car_id);
 
 		$car = Car::select('make', 'model')->where('id', $object->user_id)->first();
-	} else {
-		$route->from = getCityName($route->from);
-		$route->to = getCityName($route->to);
-	}
+	} else
+		unset($route->from, $route->to);
 
 	// SEND NOTIFICATION
 	$firebase = new Firebase();
@@ -94,17 +89,20 @@ function curlGetRequest($url){
 	return $resp;
 }
 
+// 30.10.
 function getCityName($latlng){
-	$jsonObj = json_decode(curlGetRequest('https://maps.googleapis.com/maps/api/geocode/json?latlng='.$latlng));
-	foreach($jsonObj->results as $result){
-		$types = $result->address_components[0]->types;
+	$cityName = '';
 
-		if($types[0] == 'locality' && $types[1] == 'political')
-			$cityName = $result->address_components[0]->long_name;
+	while(empty($cityName)){
+		$jsonObj = json_decode(curlGetRequest('https://maps.googleapis.com/maps/api/geocode/json?latlng='.$latlng));
+		foreach($jsonObj->results as $result){
+			$types = $result->address_components[0]->types;
+
+			if($types[0] == 'locality' && $types[1] == 'political')
+				$cityName = $result->address_components[0]->long_name;
+		}
 	}
-
-	if (isset($cityName) && !is_null($cityName))
+	
+	if ($cityName != '')
 		return $cityName;
-	else 
-		getCityName($latlng);
 }
