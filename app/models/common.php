@@ -11,7 +11,7 @@ Class Common extends Model {
 	protected $table;
 
 	public static function getAllByUserId($user_id){
-		
+	//  return array of records / false
 		$records = self::where('user_id', $user_id)->get();
 
 		foreach ($records as $first_key => $record) {
@@ -26,6 +26,7 @@ Class Common extends Model {
 	}
 
 	public function updateRecord($params){
+	//  returns true / message
 
 		if (isset($params['id'])) { unset($params['id']); }
 		$collection = collect($this);
@@ -38,24 +39,25 @@ Class Common extends Model {
 		$this->updated_at = date("Y-m-d H:i:s", time());
 		$this->save();
 
-		$dbRecord = self::find($this->id);
-		if($this->updated_at != $dbRecord->updated_at)
-			return false;
+		$found = self::find($this->id);
 
-		unset($this->created_at, $this->updated_at);
-		return $this;
-	}
+		if ($this->updated_at != $found->updated_at){
+			$class = class_basename($this);
+			displayMessage('Izmjena zapisa klase '.$class.' neuspješna.');
+		}
 
-	public function deleteRecord(){
-
-		$id = $this->id;
-		$record_name = class_basename($this);
-
-		$this->delete();
-		if(self::find($id))
-			displayMessage('Brisanje rekorda '.$record_name.' neuspješno.');
-		
 		return true;
 	}
 
+	public function deleteRecord(){
+	//  returns true / message
+		$id = $this->id;
+		$class = class_basename($this);
+
+		$this->delete();
+		if(self::find($id))
+			displayMessage('Brisanje zapisa klase '.$class.' neuspješno.');
+		
+		return true;
+	}
 }
