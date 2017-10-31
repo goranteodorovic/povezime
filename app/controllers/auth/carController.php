@@ -10,11 +10,13 @@ use App\Models\Car;
 Class CarController extends Controller {
 	
 	public function addNew($request, $response){
-	/*	required: user_id
-		optional: make, model, seats, image */
+	//	required: user_id
+	//	optional: make, model, seats, image
 		$params = $request->getParams();
 		$required = ['user_id'];
 		checkRequiredFields($required, $params);
+
+		$response = ['success' => 1];
 
 		$user = User::find($params['user_id']);
 		if(!$user)
@@ -24,12 +26,22 @@ Class CarController extends Controller {
 		if(!$car->id)
 			displayMessage('Spremanje automobila neuspješno.');
 
-		echo json_encode($car, JSON_UNESCAPED_UNICODE);
+		$response['car'] = $car;
+		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			car
+		else
+			success: 0
+			message...
+		*/
 	}
 
 	public function update($request, $response){
-	/*	required: id
-		optional: make, model, seats, image */
+	//	required: id
+	//	optional: make, model, seats, image
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
@@ -41,13 +53,13 @@ Class CarController extends Controller {
 			displayMessage('Traženi automobil ne postoji u bazi.');
 
 		$car->updateRecord($params);
-		$response['record'] = Car::find($params['id']);
+		$response['car'] = Car::find($params['id']);
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			success: 1
-			record
+			car
 		else
 			success: 0
 			message...
@@ -55,7 +67,7 @@ Class CarController extends Controller {
 	}
 
 	public function delete($request, $response){
-	/* 	required: id */
+	// 	required: id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);

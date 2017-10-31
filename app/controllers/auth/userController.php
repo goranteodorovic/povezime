@@ -9,15 +9,15 @@ use App\Models\Reg;
 use App\Models\Car;
 
 Class UserController extends Controller {
-	// user login
+	
 	public function firebaseLogin($request, $response){
-	/*	required:	email, reg_id */
+	//	required:	email, reg_id
 		$params = $request->getParams();
 		$required = ['email', 'reg_id'];
 		checkRequiredFields($required, $params);
 
 		$user = User::where('email', $params['email'])->first();
-		if(!$user){
+		if (!$user) {
 			$user = User::create($params);
 			if(!$user->id)
 				displayMessage('Spremanje korisnika neuspješno.');
@@ -26,36 +26,36 @@ Class UserController extends Controller {
 			$user_id = $user->id;
 
 		$response = ['success' => 1];
+		$response['user'] = $user;
 
 		// inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
-		if(!$found_reg){
+		if (!$found_reg) {
 			$reg = Reg::create(['user_id' => $user_id, 'reg_id' => $params['reg_id']]);
-			if(!$reg->id)
+			if (!$reg->id)
 				displayMessage('Spremanje reg id-a neuspješno.');
 		} else {
-			if($found_reg->user_id != $user->id)
+			if ($found_reg->user_id != $user->id)
 				displayMessage('Registracija nije dozvoljena.');
 		}
 
-		$collection = collect($user);
-		foreach($collection as $key => $value){
-			if($key != 'created_at' && $key != 'updated_at'){
-				$response[$key] = $value;
-			}
-		}
-
 		$response['cars'] = Car::getAllByUserId($user_id);
-
-		$regs = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
-		$response['regs'] = $regs;
-
+		$response['regs'] = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+		/*
+		if success
+			success: 1
+			user
+		else
+			success: 0
+			messsage
+		*/
 	}
 
 	public function update($request, $response){
-	/*	required:	id
-		optional:	name, surname, phone, viber, whatsapp, image */
+	//	required:	id
+	//	optional:	name, surname, phone, viber, whatsapp, image
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
@@ -67,21 +67,18 @@ Class UserController extends Controller {
 			displayMessage('Pogrešan id.');
 
 		$user->updateRecord($params);
-		$response['record'] = User::find($params['id']);
+		$response['user'] = User::find($params['id']);
+		$response['cars'] = Car::getAllByUserId($user_id);
+		$response['regs'] = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
 		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			success: 1
-			record
+			user
 		else
 			success: 0
 			messsage
 		*/
 	}
-
-	public function delete($request, $response){
-		//
-	}
-	
 }
