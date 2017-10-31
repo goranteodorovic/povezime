@@ -37,16 +37,16 @@ Class RideRequest extends Common {
 			
 			if ($type == 'search'){
 				$response['regs'] = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-				$response['object'] = Search::where('id', $search_id)->first();
+				$response['object'] = Search::find($search_id);
 				$response['type'] = 'search';
 			} else {
 				$response['regs'] = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-				$response['object'] = Offer::where('id', $offer_id)->first();
+				$response['object'] = Offer::find($offer_id);
 				$response['type'] = 'offer';
 			}
 		}
 
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		return $response;
 
 		/*
 		if success

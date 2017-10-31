@@ -7,12 +7,11 @@ use App\Models\Common;
 Class Offer extends Common {
 	protected $table = 'offers';
 
-	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'updated_at'];
+	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'updated_at', 'description'];
 
-	// 29.10.
 	public static function getMatches($search){
 
-		$offers = Offer::select('id', 'user_id', 'route', 'date', 'time', 'seats', 'luggage')
+		$offers = Offer::select('id', 'user_id', 'route', 'date', 'time', 'seats', 'luggage', 'description')
 		->where('seats', '>', 0)
 		->where('seats', '>=', $search->seats);
 		// filter by luggage
