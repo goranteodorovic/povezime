@@ -15,7 +15,6 @@ use App\Models\RideRequest;
 
 Class RideRequestController extends Controller {
 
-	// 30.10.
 	public function getAllRequests($request, $response){
 	//	required: user_id
 		$params = $request->getParams();
@@ -58,7 +57,6 @@ Class RideRequestController extends Controller {
 		*/
 	}
 
-	// 30.10.
 	public function cancelRequest($request, $response){
 	//	required: id
 		$params = $request->getParams();
@@ -94,7 +92,7 @@ Class RideRequestController extends Controller {
 		*/
 	}
 
-	// ride offer request
+	// ride offer request / offering a ride
 	public function offerRideRequest($request, $response){
 	// 	required: user_id, search_id, offer_id
 		$params = $request->getParams();
@@ -205,6 +203,7 @@ Class RideRequestController extends Controller {
 		*/
 	}
 
+	// search ride request / requesting  a ride
 	public function searchRideRequest($request, $response){
 	// 	required: user_id, search_id, offer_id
 		$params = $request->getParams();
@@ -253,6 +252,7 @@ Class RideRequestController extends Controller {
 		*/
 	}
 
+	// answer to ride search
 	public function searchRideAnswer($request, $response){
 		// 	required: id, user_id, answer
 		$params = $request->getParams();

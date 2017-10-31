@@ -15,7 +15,7 @@ use App\Models\RideRequest;
 
 Class OfferController extends Controller {
 
-	public function rideOffer($request, $response){
+	public function offerRide($request, $response){
 	// 	required: user_id, route, car_id, seats, date, time, luggage
 		$params = $request->getParams();
 		$required = ['user_id', 'route', 'car_id', 'seats', 'date', 'time', 'luggage'];
@@ -63,7 +63,8 @@ Class OfferController extends Controller {
 		*/
 	}
 
-	public function cancelOffer($request, $response){
+	// 31.10.
+	public function offerRideCancel($request, $response){
 	// 	required: id
 		$params = $request->getParams();
 		$required = ['id'];
@@ -74,9 +75,10 @@ Class OfferController extends Controller {
 		if (!$offer)
 			displayMessage('Pogrešan id...');
 		
-		$ride_requests = RideRequest::getAllByUserId($offer->user_id);
+		$user = User::fullName($offer->user_id);
+		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
 
-		$response['success'] = 1;
+		$response = ['success' => 1];
 		$search_regs = array();
 
 		// check / delete related requests
@@ -92,7 +94,6 @@ Class OfferController extends Controller {
 		if (count($search_regs) > 0) {
 			// notifications to searchers
 			$title = 'Brisanje ponude prevoza';
-			$user = User::fullName($offer->user_id);
 			$message = $user.' je obrisao prevoz. Potražite novi!';
 			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
 			$response['firebase'] = $fb_response;
@@ -110,7 +111,7 @@ Class OfferController extends Controller {
 		*/
 	}
 
-	public function updateOffer($request, $response){
+	public function offerRideUpdate($request, $response){
 	//  required: id
 	//  optional: user_id, route, car_id, seats, date, time, luggage
 		$params = $request->getParams();
@@ -121,6 +122,11 @@ Class OfferController extends Controller {
 		$offer = offer::find($params['id']);
 		if (!$offer)
 			displayMessage('Pogrešan id...');
+
+		if (isset($params['seats']))
+			$params['seats_start'] = $params['seats'];
+		else
+			$params['seats'] = $offer->seats_start;
 
 		if (isset($params['route'])) {
 			$route_array = explode(' - ', $params['route']);
@@ -141,17 +147,17 @@ Class OfferController extends Controller {
 				$search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, $delete_request['regs']);
 		}
 
+		// update record
+		$beforeUpdate = clone $offer;
+		$offer->updateRecord($params);
+
+		// notification about deleted requests
 		if (!empty($search_regs_for_deleted_requests)) {
 			$title = 'Izmjena ponude prevoza';
-			$message = $user.' je izmijenio ponudu prevoza. Provjerite da li vam isti odgovara!';
+			$message = $user.' je izmijenio ponudu prevoza "'.$beforeUpdate->description.'" od '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
 			$fb_response = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
 			$response['firebase']['delete'] = $fb_response;
 		}
-
-		if (isset($params['seats']))
-			$params['seats_start'] = $params['seats'];
-
-		$offer->updateRecord($params);
 
 		// check matched searches
 		$searches = $this->getSearchMatches($offer);
@@ -171,8 +177,8 @@ Class OfferController extends Controller {
 		/*
 		if success
 			success: 1
+			firebase['update']
 			if search matches 	=> searches
-								=> firebase['update']
 			if deleted requests => firebase['delete']
 		else
 			success: 0
@@ -183,19 +189,16 @@ Class OfferController extends Controller {
 
 	public function getSearchMatches($offer){
 		$response = ['success' => 1];
-
 		$searches = Search::getMatches($offer);
 		$regs = array();
 
 		foreach ($searches as $search) {
 			$search->user = User::fullName($search->user_id);
-			//$search->from = getCityName($search->from);
-			//$search->to = getCityName($search->to);
 			$search->date = date('d.M.Y.', strtotime($search->date));
+			unset($search->from, $search->to);
 
 			$response['searches'][] = $search;
-
-			$regs = array_merge($regs, Reg::where('user_id', $search->id)->pluck('reg_id')->all());
+			$regs = array_merge($regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
 		}
 
 		if (empty($regs)) {
