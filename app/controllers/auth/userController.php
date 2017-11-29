@@ -25,7 +25,7 @@ Class UserController extends Controller {
 		} else
 			$user_id = $user->id;
 
-        $resp['user'] = &$user;
+        //$resp['user'] = &$user;
 
 		// inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
@@ -40,7 +40,7 @@ Class UserController extends Controller {
 
         $user->cars = Car::getAllByUserId($user_id);
 		$user->regs = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+		echo json_encode($user, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -65,8 +65,8 @@ Class UserController extends Controller {
 		$user->cars = Car::getAllByUserId($user->id);
         $user->regs = Reg::where('user_id', $user->id)->pluck('reg_id')->all();
 
-        $resp['user'] = $user;
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+        //$resp['user'] = $user;
+		echo json_encode($user, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
