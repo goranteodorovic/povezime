@@ -24,46 +24,43 @@ Class OfferController extends Controller {
 		$route_array = explode(' - ', $params['route']);
 		$params['seats_start'] = $params['seats'];
 		$params['description'] = getCityName($route_array[0]).' - '.getCityName(end($route_array));
-		$response = ['success' => 1];
 
 		// insert offer into database
 		$offer = Offer::create($params);
 		if(!$offer->id)
-			displayMessage('Spremanje ponude neuspješno.');
+			displayMessage('Spremanje ponude neuspješno.', 503);
 
 		// check for searches
 		$searches = $this->getSearchMatches($offer);
-		if (!$searches)
-			displayMessage('Nema podudaranja u potražnji', 1);
+		if (!$searches) {
+            $resp['searches'] = '';
+            exit(json_encode($resp));
+        }
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
 		$user = User::fullName($offer->user_id);
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
 		$fb_response = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
-		$response['firebase'] = $fb_response;
+        $resp['firebase'] = $fb_response;
 
 		// response to offerer
-		$response['regs'] = $searches['regs'];
-		$response['searches'] = $searches['searches'];
+        $resp['regs'] = $searches['regs'];
+        $resp['searches'] = $searches['searches'];
 
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
-			if no matches => message
+			if no matches => ''
 			regs
 			searches (array of obj)
 			firebase
 		else
-			success: 0
 			message...
-
 		*/
 	}
 
-	// 31.10.
 	public function offerRideCancel($request, $response){
 	// 	required: id
 		$params = $request->getParams();
@@ -73,12 +70,11 @@ Class OfferController extends Controller {
 		// get all objects to work with
 		$offer = offer::find($params['id']);
 		if (!$offer)
-			displayMessage('Pogrešan id...');
+			displayMessage('Pogrešan id.', 403);
 		
 		$user = User::fullName($offer->user_id);
 		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
 
-		$response = ['success' => 1];
 		$search_regs = array();
 
 		// check / delete related requests
@@ -96,17 +92,15 @@ Class OfferController extends Controller {
 			$title = 'Brisanje ponude prevoza';
 			$message = $user.' je obrisao prevoz. Potražite novi!';
 			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-			$response['firebase'] = $fb_response;
+            $resp['firebase'] = $fb_response;
 		}	
 
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
 			if reqs => firebase
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -121,7 +115,7 @@ Class OfferController extends Controller {
 		// get all objects/array of objects to work with
 		$offer = offer::find($params['id']);
 		if (!$offer)
-			displayMessage('Pogrešan id...');
+			displayMessage('Pogrešan id.', 403);
 
 		if (isset($params['seats']))
 			$params['seats_start'] = $params['seats'];
@@ -161,8 +155,10 @@ Class OfferController extends Controller {
 
 		// check matched searches
 		$searches = $this->getSearchMatches($offer);
-		if (!$searches)
-			displayMessage('Nema podudaranja u potražnji', 1);
+		if (!$searches) {
+            $response['searches'] = '';
+            exit(json_encode($response));
+        }
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
@@ -176,12 +172,10 @@ Class OfferController extends Controller {
 
 		/*
 		if success
-			success: 1
 			firebase['update']
 			if search matches 	=> searches
 			if deleted requests => firebase['delete']
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -207,5 +201,12 @@ Class OfferController extends Controller {
  			$response['regs'] = $regs;
 			return $response;
  		}
+
+ 		/*
+ 		if regs
+ 		    response['regs']
+ 		else
+ 		    false
+ 		*/
 	}
 }

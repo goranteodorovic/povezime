@@ -43,7 +43,7 @@ Class Common extends Model {
 
 		if ($this->updated_at != $found->updated_at){
 			$class = class_basename($this);
-			displayMessage('Izmjena zapisa klase '.$class.' neuspješna.');
+			displayMessage('Izmjena zapisa klase '.$class.' neuspješna.', 503);
 		}
 
 		return true;
@@ -56,7 +56,7 @@ Class Common extends Model {
 
 		$this->delete();
 		if(self::find($id))
-			displayMessage('Brisanje zapisa klase '.$class.' neuspješno.');
+            displayMessage('Brisanje zapisa klase '.$class.' neuspješno.', 503);
 		
 		return true;
 	}

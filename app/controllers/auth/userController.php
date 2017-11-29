@@ -20,35 +20,32 @@ Class UserController extends Controller {
 		if (!$user) {
 			$user = User::create($params);
 			if(!$user->id)
-				displayMessage('Spremanje korisnika neuspješno.');
+				displayMessage('Spremanje korisnika neuspješno.', 503);
 			$user_id = $user->id;
 		} else
 			$user_id = $user->id;
 
-		$response = ['success' => 1];
-		$response['user'] = $user;
+        $resp['user'] = &$user;
 
 		// inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
 		if (!$found_reg) {
 			$reg = Reg::create(['user_id' => $user_id, 'reg_id' => $params['reg_id']]);
 			if (!$reg->id)
-				displayMessage('Spremanje reg id-a neuspješno.');
+				displayMessage('Spremanje reg id-a neuspješno.', 503);
 		} else {
 			if ($found_reg->user_id != $user->id)
-				displayMessage('Registracija nije dozvoljena.');
+				displayMessage('Registracija nije dozvoljena.', 403);
 		}
 
-		$response['cars'] = Car::getAllByUserId($user_id);
-		$response['regs'] = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        $user->cars = Car::getAllByUserId($user_id);
+		$user->regs = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
 			user
 		else
-			success: 0
 			messsage
 		*/
 	}
@@ -60,24 +57,21 @@ Class UserController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = ['success' => 1];
-
 		$user = User::find($params['id']);
 		if(!$user)
-			displayMessage('Pogrešan id.');
+			displayMessage('Pogrešan id.', 403);
 
 		$user->updateRecord($params);
-		$response['user'] = User::find($params['id']);
-		$response['cars'] = Car::getAllByUserId($user_id);
-		$response['regs'] = Reg::where('user_id', $user_id)->pluck('reg_id')->all();
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		$user->cars = Car::getAllByUserId($user->id);
+        $user->regs = Reg::where('user_id', $user->id)->pluck('reg_id')->all();
+
+        $resp['user'] = $user;
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
 			user
 		else
-			success: 0
 			messsage
 		*/
 	}

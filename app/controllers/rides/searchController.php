@@ -23,17 +23,18 @@ Class SearchController extends Controller {
 		
 		$params['seats_start'] = $params['seats'];
 		$params['description'] = getCityName($params['from']).' - '.getCityName($params['to']);
-		$response = ['success' => 1];
 
 		// insert search into database
 		$search = Search::create($params);
 		if(!$search->id)
-			displayMessage('Spremanje potražnje neuspješno.');
+			displayMessage('Spremanje potražnje neuspješno.', 503);
 
 		// check for offers
 		$offers = $this->getOfferMatches($search);
-		if (!$offers)
-			displayMessage('Nema podudaranja u ponudi', 1);
+		if (!$offers) {
+            $response['offers'] = '';
+            exit(json_encode($response));
+        }
 
 		// notification to offers
 		$title = 'Potražnja prevoza';
@@ -50,19 +51,15 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-			success: 1
 			if no matches => message
 			regs
 			offers (array of obj)
 			firebase
 		else
-			success: 0
 			message...
-
 		*/
 	}
 
-	// 31.10.
 	public function searchRideCancel($request, $response){
 	// 	required: id
 		$params = $request->getParams();
@@ -72,12 +69,11 @@ Class SearchController extends Controller {
 		// get all objects to work with
 		$search = Search::find($params['id']);
 		if (!$search)
-			displayMessage('Pogrešan id...');
+			displayMessage('Pogrešan id.', 403);
 		
 		$user = User::fullName($search->user_id);
 		$ride_requests = RideRequest::where('search_id', $search->id)->where('user_id', $search->user_id)->get();
 
-		$response = ['success' => 1];
 		$offer_regs = array();
 
 		// check / delete related requests
@@ -102,10 +98,8 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-			success: 1
 			if reqs => firebase
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -120,7 +114,7 @@ Class SearchController extends Controller {
 		// get all objects / array of objects to work with
 		$search = Search::find($params['id']);
 		if (!$search)
-			displayMessage('Pogrešan id...');
+			displayMessage('Pogrešan id.', 403);
 
 		if (isset($params['seats']))
 			$params['seats_start'] = $params['seats'];
@@ -137,7 +131,6 @@ Class SearchController extends Controller {
 		$user = User::fullName($search->user_id);
 		$ride_requests = RideRequest::where('search_id', $search->id)->where('user_id', $search->user_id)->get();
 
-		$response = ['success' => 1];
 		$offer_regs_for_deleted_requests = array();
 
 		// check / delete related requests
@@ -162,8 +155,10 @@ Class SearchController extends Controller {
 
 		// check matched offers
 		$offers = $this->getOfferMatches($search);
-		if (!$offers)
-			displayMessage('Nema podudaranja u ponudi', 1);
+		if (!$offers) {
+            $response['offers'] = '';
+            exit(json_encode($response));
+        }
 
 		// notification to offerers
 		$title = 'Izmjena potražnje prevoza';
@@ -177,12 +172,10 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-			success: 1
 			firebase['update']
 			if offer matches 	=> offers
 			if deleted requests => firebase['delete']
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -208,5 +201,12 @@ Class SearchController extends Controller {
  			$response['regs'] = $regs;
 			return $response;
  		}
+
+        /*
+        if regs
+            response['regs']
+        else
+            false
+        */
 	}
 }

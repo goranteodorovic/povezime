@@ -6,18 +6,18 @@ use App\Models\Car;
 function checkRequiredFields($required, $params){
 	foreach($required as $field){
 		if(!isset($params[$field])){
-			$response['success'] = 0;
-			$response['message'] = 'Provjerite neophodna polja: '.implode(', ', $required).'!';
-			exit(json_encode($response, JSON_UNESCAPED_UNICODE));
+            $msg = 'Provjeriti neophodna polja: '.implode(', ', $required).'.';
+            displayMessage($msg, 400);
 		}
 	}
 }
 
-function displayMessage($msg, $success = 0){
-	$response = array();
-	$response['success'] = $success;
-	$response['message'] = $msg;
-	exit(json_encode($response, JSON_UNESCAPED_UNICODE));
+function displayMessage($msg, $response_code = 200){
+    if (isset($response_code) && $response_code != 200) {
+        http_response_code($response_code);
+    }
+    $resp['message'] = $msg;
+    exit(json_encode($resp, JSON_UNESCAPED_UNICODE));
 }
 
 /* distance from point to point in km */
@@ -63,9 +63,8 @@ function sendNotifications($title, $message, $reg_ids, $object, $type){
 	$fb_response = $firebase->sendMultiple($reg_ids, $json);
 
 	//return $fb_response;
-
-	$response = ['payload' => $payload, 'response' => $fb_response];
-	return $response;
+    $resp = ['payload' => $payload, 'response' => $fb_response];
+	return $resp;
 }
 
 function curlGetRequest($url){
@@ -89,7 +88,6 @@ function curlGetRequest($url){
 	return $resp;
 }
 
-// 30.10.
 function getCityName($latlng){
 	$cityName = '';
 

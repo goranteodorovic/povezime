@@ -16,25 +16,21 @@ Class CarController extends Controller {
 		$required = ['user_id'];
 		checkRequiredFields($required, $params);
 
-		$response = ['success' => 1];
-
 		$user = User::find($params['user_id']);
 		if(!$user)
-			displayMessage('Pogrešan id.');
+			displayMessage('Pogrešan id.', 400);
 
 		$car = Car::create($params);
 		if(!$car->id)
-			displayMessage('Spremanje automobila neuspješno.');
+			displayMessage('Spremanje automobila neuspješno.', 503);
 
-		$response['car'] = $car;
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        $resp['car'] = $car;
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
 			car
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -46,22 +42,18 @@ Class CarController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = ['success' => 1];
-
 		$car = Car::find($params['id']);
 		if(!$car)
-			displayMessage('Traženi automobil ne postoji u bazi.');
+			displayMessage('Traženi automobil ne postoji u bazi.', 400);
 
 		$car->updateRecord($params);
-		$response['car'] = Car::find($params['id']);
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		$resp['car'] = Car::find($params['id']);
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
 			car
 		else
-			success: 0
 			message...
 		*/
 	}
@@ -72,22 +64,20 @@ Class CarController extends Controller {
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = ['success' => 1];
-
 		$car = Car::find($params['id']);
 		if(!$car)
-			displayMessage('Traženi automobil ne postoji u bazi.');
+			displayMessage('Traženi automobil ne postoji u bazi.', 400);
 
 		if (!$car->deleteRecord())
-			displayMessage('Došlo je do greške...');
+			displayMessage('Brisanju automobila neuspješno.', 503);
 
-		return json_encode($response, JSON_UNESCAPED_UNICODE);
+        $resp = ['success' => 1];
+        return json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			success: 1
+			success 1
 		else
-			success: 0
 			message...
 		*/
 	}
