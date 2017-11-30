@@ -25,9 +25,7 @@ Class UserController extends Controller {
 		} else
 			$user_id = $user->id;
 
-        //$resp['user'] = &$user;
-
-		// inserting reg id into db
+        // inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
 		if (!$found_reg) {
 			$reg = Reg::create(['user_id' => $user_id, 'reg_id' => $params['reg_id']]);
@@ -62,11 +60,8 @@ Class UserController extends Controller {
 			displayMessage('Pogrešan id.', 403);
 
 		$user->updateRecord($params);
-		$user->cars = Car::getAllByUserId($user->id);
-        $user->regs = Reg::where('user_id', $user->id)->pluck('reg_id')->all();
 
-        //$resp['user'] = $user;
-		echo json_encode($user, JSON_UNESCAPED_UNICODE);
+        echo json_encode($user, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success

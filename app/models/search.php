@@ -7,7 +7,7 @@ use App\Models\Common;
 Class Search extends Common {
 	protected $table = 'searches';
 
-	protected $fillable = ['user_id', 'from', 'to', 'date', 'one_day', 'seats', 'seats_start', 'luggage', 'updated_at', 'description'];
+	protected $fillable = ['user_id', 'from', 'to', 'date', 'one_day', 'seats', 'seats_start', 'luggage', 'updated_at'];
 
 	public static function getMatches($offer){
 	//  returns $searches / false		
@@ -17,7 +17,7 @@ Class Search extends Common {
 		$minus_one = date('Y-m-d', strtotime("-1 day", strtotime($offer->date)));
 
 		// filter by seats, partly-date
-		$searches = self::select('id', 'user_id', 'from', 'to', 'date', 'one_day', 'seats', 'luggage', 'description')
+		$searches = self::select('id', 'user_id', 'from', 'to', 'date', 'one_day', 'seats', 'luggage')
 		->where('seats', '>', 0)
 		->where('seats', '<=', $offer->seats)
 		->whereBetween('date', [$minus_one, $plus_one]);

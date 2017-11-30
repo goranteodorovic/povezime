@@ -23,39 +23,28 @@ Class RideRequest extends Common {
 		$offer = Offer::where('id', $offer_id)->first();
 		$search = Search::where('id', $search_id)->first();
 
-		$response = ['success' => 1];
-		$response['user'] = User::fullName($this->user_id);
-
+		// return true or exit(msg)
 		$this->deleteRecord();
 
 		if ((!$search && $type == 'offer') || (!$offer && $type == 'search'))
-			return $response;
+		    return true;
 		
 		if ($answer == 'accepted') {
 			$offer->updateRecord(['seats' => $offer->seats + $search->seats_start]);
 			$search->updateRecord(['seats' => $search->seats_start]);
-			
-			if ($type == 'search'){
-				$response['regs'] = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-				$response['object'] = Search::find($search_id);
-				$response['type'] = 'search';
-			} else {
-				$response['regs'] = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-				$response['object'] = Offer::find($offer_id);
-				$response['type'] = 'offer';
-			}
-		}
 
-		return $response;
+            if ($type == 'search')
+                $regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
+            else
+                $regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
+
+            return $regs;
+		}
 
 		/*
 		if success
-			success: 1
 			regs
-			object
-			type
 		else
-			success: 0
 			message...
 		*/
 	}

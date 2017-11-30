@@ -22,10 +22,8 @@ Class RideRequestController extends Controller {
 		checkRequiredFields($required, $params);
 
 		$ride_requests = RideRequest::getAllByUserId($params['user_id']);
-		if (!isset($ride_requests) || count($ride_requests) == 0) {
-            $response['ride_requests'] = '';
-            exit(json_encode($response));
-        }
+		if (!isset($ride_requests) || count($ride_requests) == 0)
+            exit(json_encode(array()));
 
 		foreach ($ride_requests as $key => $rideRequest) {
 
@@ -33,56 +31,52 @@ Class RideRequestController extends Controller {
 			$offer = Offer::find($rideRequest->offer_id);
 
 			if($rideRequest->type == 'search')
-				$user = User::find($offer->user_id);
+                $rideRequest->user = User::find($offer->user_id);
 			else
-				$user = User::find($search->user_id);
+                $rideRequest->user = User::find($search->user_id);
 
-			$rideRequest->search = $search->description;
-			$rideRequest->offer = $offer->description;
-			$rideRequest->date = date('d.M.Y.', strtotime($offer->date));
-			$rideRequest->user = User::fullName($user->id);
-
-			unset($rideRequest->search_id, $rideRequest->offer_id, $rideRequest->user_id);
+            $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
+			unset($rideRequest->user_id);
 		}
 
 		echo json_encode($ride_requests, JSON_UNESCAPED_UNICODE);
+
 		/*
 		if success
-			if no matches => ''
-			ride_requests (array of objects)
+			ride_requests
 		else
-			message: ...
+			message...
 		*/
 	}
 
-	public function cancelRequest($request, $response){
+    public function cancelRequest($request, $response){
 	//	required: id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
 
-		$response = ['success' => 1];
-
 		$rideRequest = RideRequest::find($params['id']);
 		if (!$rideRequest)
 			displayMessage('Pogrešan id.', 403);
 
-		$delete_request = $rideRequest->deleteRequest();
+        $user = User::find($rideRequest->user_id);
+        $type = $rideRequest->type;
+        if ($rideRequest->type == 'search')
+            $obj = Search::find($rideRequest->search_id);
+        else
+            $obj = Offer::find($rideRequest->offer_id);
 
-		if ($delete_request['success'] == 0)
-			displayMessage('Brisanje zahtjeva neuspješno!', 503);
+		$delete_request_regs = $rideRequest->deleteRequest();
+        echo json_encode($params['id']);
 
-		if ($delete_request['regs']) {
+		if (!empty($delete_request_regs)) {
 			$title = 'Otkazivanje zahtjeva';
-			$message = $delete_request['user'].' je otkazao zahtjev za prevoz.';
-			$fb_response = sendNotifications($title, $message, $delete_request['regs'], $delete_request['object'], $delete_request['type']);
-			$response['firebase'] = $fb_response;
+			$message = $user.' je otkazao zahtjev za prevoz.';
+			sendNotifications($title, $message, $delete_request_regs, $obj, $type);
 		}
-		
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
 		/*
 		if success
-			firebase (if regs)	
+			id
 		else
 			message...
 		*/
@@ -118,18 +112,15 @@ Class RideRequestController extends Controller {
 		$title = 'Zahtjev/ponuda prevoza';
 		$message = User::fullName($user->id).' vam je ponudio prevoz.';
 		$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-		$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-		$response['firebase'] = $fb_response;
+		sendNotifications($title, $message, $search_regs, $offer, 'offer');
 
-		$response['request'] = $rideRequest;
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			request
-			firebase
 		else
-			message:	...
+			message...
 		*/
 	}
 
@@ -175,17 +166,15 @@ Class RideRequestController extends Controller {
 			$title = 'Odgovor na ponuda prevoza';
 			$message = User::fullName($search->user_id).' je '.$fb_msg.' vaš zahtjev za ponudu prevoza.';
 			$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-			$fb_response = sendNotifications($title, $message, $offer_regs, $search, 'search');
-			$response['firebase'] = $fb_response;
+			sendNotifications($title, $message, $offer_regs, $search, 'search');
 		}
 
-		$response['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        $resp['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			message...
-			firebase
 		else
 			message...
 		*/
@@ -221,18 +210,15 @@ Class RideRequestController extends Controller {
 		$title = 'Zahtjev/potražnja prevoza';
 		$message = User::fullName($user->id).' potražuje prevoz.';
 		$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-		$fb_response = sendNotifications($title, $message, $offer_regs, $search, 'search');
-		$response['firebase'] = $fb_response;
+		sendNotifications($title, $message, $offer_regs, $search, 'search');
 
-		$response['request'] = $rideRequest;
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			request
-			firebase
 		else
-			message:	...
+			message...
 		*/
 	}
 
@@ -278,17 +264,15 @@ Class RideRequestController extends Controller {
 			$title = 'Odgovor na potražnju prevoza';
 			$message = User::fullName($offer->user_id).' je '.$fb_msg.' vaš zahtjev za potražnju prevoza.';
 			$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-			$response['firebase'] = $fb_response;
+			sendNotifications($title, $message, $search_regs, $offer, 'offer');
 		}
 
-		$response['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        $resp['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
+		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
 			message...
-			firebase
 		else
 			message...
 		*/

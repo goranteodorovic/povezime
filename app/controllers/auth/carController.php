@@ -24,8 +24,7 @@ Class CarController extends Controller {
 		if(!$car->id)
 			displayMessage('Spremanje automobila neuspješno.', 503);
 
-        $resp['car'] = $car;
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+        echo json_encode($car, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -47,8 +46,8 @@ Class CarController extends Controller {
 			displayMessage('Traženi automobil ne postoji u bazi.', 400);
 
 		$car->updateRecord($params);
-		$resp['car'] = Car::find($params['id']);
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+
+		echo json_encode($car, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -68,15 +67,12 @@ Class CarController extends Controller {
 		if(!$car)
 			displayMessage('Traženi automobil ne postoji u bazi.', 400);
 
-		if (!$car->deleteRecord())
-			displayMessage('Brisanju automobila neuspješno.', 503);
-
-        $resp = ['success' => 1];
-        return json_encode($resp, JSON_UNESCAPED_UNICODE);
+        $car->deleteRecord();
+        echo json_encode($params['id']);
 
 		/*
 		if success
-			success 1
+			id
 		else
 			message...
 		*/

@@ -88,7 +88,7 @@ function curlGetRequest($url){
 	return $resp;
 }
 
-function getCityName($latlng){
+/*function getCityName($latlng){
 	$cityName = '';
 
 	while(empty($cityName)){
@@ -97,10 +97,9 @@ function getCityName($latlng){
 			$types = $result->address_components[0]->types;
 
 			if($types[0] == 'locality' && $types[1] == 'political')
-				$cityName = $result->address_components[0]->long_name;
+                $cityName = $result->address_components[0]->long_name;
 		}
 	}
 	
-	if ($cityName != '')
-		return $cityName;
-}
+	return $cityName;
+}*/

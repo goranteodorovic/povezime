@@ -56,7 +56,7 @@ Class Common extends Model {
 
 		$this->delete();
 		if(self::find($id))
-            displayMessage('Brisanje zapisa klase '.$class.' neuspješno.', 503);
+            displayMessage('Brisanje zapisa '.$id.' klase '.$class.' neuspješno.', 503);
 		
 		return true;
 	}

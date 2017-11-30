@@ -21,9 +21,7 @@ Class OfferController extends Controller {
 		$required = ['user_id', 'route', 'car_id', 'seats', 'date', 'time', 'luggage'];
 		checkRequiredFields($required, $params);
 		
-		$route_array = explode(' - ', $params['route']);
 		$params['seats_start'] = $params['seats'];
-		$params['description'] = getCityName($route_array[0]).' - '.getCityName(end($route_array));
 
 		// insert offer into database
 		$offer = Offer::create($params);
@@ -32,30 +30,20 @@ Class OfferController extends Controller {
 
 		// check for searches
 		$searches = $this->getSearchMatches($offer);
-		if (!$searches) {
-            $resp['searches'] = '';
-            exit(json_encode($resp));
-        }
+		if (!$searches)
+            exit(json_encode(array()));
+
+        echo json_encode($searches, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
 		$user = User::fullName($offer->user_id);
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		$fb_response = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
-        $resp['firebase'] = $fb_response;
-
-		// response to offerer
-        $resp['regs'] = $searches['regs'];
-        $resp['searches'] = $searches['searches'];
-
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+		sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
 
 		/*
 		if success
-			if no matches => ''
-			regs
-			searches (array of obj)
-			firebase
+			searches
 		else
 			message...
 		*/
@@ -79,27 +67,25 @@ Class OfferController extends Controller {
 
 		// check / delete related requests
 		foreach ($ride_requests as $rideRequest) {
-			$delete_request = $rideRequest->deleteRequest();
+            $delete_request_regs = $rideRequest->deleteRequest();
 
-			if (isset($delete_request['regs']))
-				$search_regs = array_merge($search_regs, $delete_request['regs']);
+			if (isset($delete_request_regs) && !empty($delete_request_regs))
+                $search_regs = array_merge($search_regs, $delete_request_regs);
 		}
 
 		$offer->deleteRecord();
+        echo json_encode($params['id']);
 
 		if (count($search_regs) > 0) {
 			// notifications to searchers
 			$title = 'Brisanje ponude prevoza';
 			$message = $user.' je obrisao prevoz. Potražite novi!';
-			$fb_response = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-            $resp['firebase'] = $fb_response;
-		}	
-
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+			sendNotifications($title, $message, $search_regs, $offer, 'offer');
+		}
 
 		/*
 		if success
-			if reqs => firebase
+		    id
 		else
 			message...
 		*/
@@ -122,23 +108,17 @@ Class OfferController extends Controller {
 		else
 			$params['seats'] = $offer->seats_start;
 
-		if (isset($params['route'])) {
-			$route_array = explode(' - ', $params['route']);
-			$params['description'] = getCityName($route_array[0]).' - '.getCityName(end($route_array));
-		}
-
 		$user = User::fullName($offer->user_id);
 		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
 
-		$response = ['success' => 1];
 		$search_regs_for_deleted_requests = array();
 		
 		// check / delete related requests
 		foreach ($ride_requests as $rideRequest) {
 			$delete_request = $rideRequest->deleteRequest();
 
-			if (isset($delete_request['regs']))
-				$search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, $delete_request['regs']);
+			if (isset($delete_request_regs) && !empty($delete_request_regs))
+                $search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, $delete_request_regs);
 		}
 
 		// update record
@@ -148,33 +128,25 @@ Class OfferController extends Controller {
 		// notification about deleted requests
 		if (!empty($search_regs_for_deleted_requests)) {
 			$title = 'Izmjena ponude prevoza';
-			$message = $user.' je izmijenio ponudu prevoza "'.$beforeUpdate->description.'" od '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
-			$fb_response = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
-			$response['firebase']['delete'] = $fb_response;
+			$message = $user.' je izmijenio ponudu prevoza za '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
+            sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
 		}
 
 		// check matched searches
 		$searches = $this->getSearchMatches($offer);
-		if (!$searches) {
-            $response['searches'] = '';
-            exit(json_encode($response));
-        }
+		if (!$searches)
+            exit(json_encode(array()));
+
+        echo json_encode($offer, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		$fb_response = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
-		$response['firebase']['update'] = $fb_response;
-
-		// response to offerer
-		$response['searches'] = $searches['searches'];
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
+		sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
 
 		/*
 		if success
-			firebase['update']
-			if search matches 	=> searches
-			if deleted requests => firebase['delete']
+			searches
 		else
 			message...
 		*/
@@ -182,7 +154,6 @@ Class OfferController extends Controller {
 
 
 	public function getSearchMatches($offer){
-		$response = ['success' => 1];
 		$searches = Search::getMatches($offer);
 		$regs = array();
 
@@ -191,20 +162,21 @@ Class OfferController extends Controller {
 			$search->date = date('d.M.Y.', strtotime($search->date));
 			unset($search->from, $search->to);
 
-			$response['searches'][] = $search;
+            $resp['searches'][] = $search;
 			$regs = array_merge($regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
 		}
 
 		if (empty($regs)) {
 			return false;
 		} else {
- 			$response['regs'] = $regs;
-			return $response;
+            $resp['regs'] = $regs;
+			return $resp;
  		}
 
  		/*
- 		if regs
- 		    response['regs']
+ 		if success
+ 		    searches
+ 		    regs
  		else
  		    false
  		*/
