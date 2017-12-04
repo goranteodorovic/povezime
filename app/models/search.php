@@ -21,30 +21,21 @@ Class Search extends Common {
 		->where('seats', '>', 0)
 		->where('seats', '<=', $offer->seats)
 		->whereBetween('date', [$minus_one, $plus_one]);
-		if($offer->luggage == 0){ $searches = $searches->where('luggage', 0); }
+		if($offer->luggage === 0){ $searches = $searches->where('luggage', 0); }
 		$searches = $searches->get();
 
 		foreach ($searches as $index => $search) {
-			if ($search->one_day == 0 && $offer->date != $search->date)
+			if ($search->one_day === 0 && $offer->date !== $search->date)
 				unset($searches[$index]);
-
-			// lat long of search object
-			$from_lat = substr($search->from, 0, strpos($search->from, ','));
-			$from_long = substr($search->from, strpos($search->from, ',')+1);
-
-			$to_lat = substr($search->to, 0, strpos($search->to, ','));
-			$to_long = substr($search->to, strpos($search->to, ',')+1);
 
 			$from = null;		// closest place from SEARCH->FROM to offer route array
             $to = null;			// closest place from SEARCH->TO to offer route array
 
             // get distances between each latlong and offer from/to latlong
 			foreach ($offer_route_arr as $latlong) {
-				$lat = substr($latlong, 0, strpos($latlong, ','));
-				$long = substr($latlong, strpos($latlong, ',')+1);
-
-				$distance_from = getDistance($from_lat, $from_long, $lat, $long);
-				$distance_to = getDistance($to_lat, $to_long, $lat, $long);
+                // if distance is less than 5km save latlong for further check
+				$distance_from = getDistanceGeoKit($latlong, $search->from);
+                $distance_to = getDistanceGeoKit($latlong, $search->to);
 
 				if($distance_from < 5)	{	$from = $latlong;	}
 				if($distance_to < 5)	{	$to = $latlong;		}

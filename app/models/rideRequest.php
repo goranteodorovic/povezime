@@ -8,6 +8,10 @@ use App\Models\Reg;
 use App\Models\Search;
 use App\Models\Offer;
 
+/*
+ * izmijenio type i answer kolonu
+ */
+
 Class RideRequest extends Common {
 	protected $table = 'requests';
 
@@ -26,14 +30,14 @@ Class RideRequest extends Common {
 		// return true or exit(msg)
 		$this->deleteRecord();
 
-		if ((!$search && $type == 'offer') || (!$offer && $type == 'search'))
+		if ((!$search && $type == 'O') || (!$offer && $type == 'S'))
 		    return true;
 		
-		if ($answer == 'accepted') {
+		if ($answer == 'A') {
 			$offer->updateRecord(['seats' => $offer->seats + $search->seats_start]);
 			$search->updateRecord(['seats' => $search->seats_start]);
 
-            if ($type == 'search')
+            if ($type == 'S')
                 $regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
             else
                 $regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
@@ -50,3 +54,7 @@ Class RideRequest extends Common {
 	}
 
 }
+
+/*
+ * 33, 36, 40
+ */

@@ -30,10 +30,10 @@ Class OfferController extends Controller {
 
 		// check for searches
 		$searches = $this->getSearchMatches($offer);
-		if (!$searches)
+        if (!$searches)
             exit(json_encode(array()));
 
-        echo json_encode($searches, JSON_UNESCAPED_UNICODE);
+        echo json_encode($searches['searches'], JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
@@ -74,7 +74,7 @@ Class OfferController extends Controller {
 		}
 
 		$offer->deleteRecord();
-        echo json_encode($params['id']);
+        echo json_encode(['id'=>$params['id']]);
 
 		if (count($search_regs) > 0) {
 			// notifications to searchers
@@ -115,7 +115,7 @@ Class OfferController extends Controller {
 		
 		// check / delete related requests
 		foreach ($ride_requests as $rideRequest) {
-			$delete_request = $rideRequest->deleteRequest();
+			$delete_request_regs = $rideRequest->deleteRequest();
 
 			if (isset($delete_request_regs) && !empty($delete_request_regs))
                 $search_regs_for_deleted_requests = array_merge($search_regs_for_deleted_requests, $delete_request_regs);
@@ -137,7 +137,7 @@ Class OfferController extends Controller {
 		if (!$searches)
             exit(json_encode(array()));
 
-        echo json_encode($offer, JSON_UNESCAPED_UNICODE);
+        echo json_encode($searches['searches'], JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
@@ -160,7 +160,6 @@ Class OfferController extends Controller {
 		foreach ($searches as $search) {
 			$search->user = User::fullName($search->user_id);
 			$search->date = date('d.M.Y.', strtotime($search->date));
-			unset($search->from, $search->to);
 
             $resp['searches'][] = $search;
 			$regs = array_merge($regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());

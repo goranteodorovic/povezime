@@ -68,7 +68,7 @@ Class CarController extends Controller {
 			displayMessage('Traženi automobil ne postoji u bazi.', 400);
 
         $car->deleteRecord();
-        echo json_encode($params['id']);
+        echo json_encode(['id'=>$params['id']]);
 
 		/*
 		if success

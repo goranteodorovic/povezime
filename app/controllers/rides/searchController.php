@@ -33,7 +33,7 @@ Class SearchController extends Controller {
 		if (!$offers)
             exit(json_encode(array()));
 
-        echo json_encode($offers, JSON_UNESCAPED_UNICODE);
+        echo json_encode($offers['offers'], JSON_UNESCAPED_UNICODE);
 
 		// notification to offers
 		$title = 'Potražnja prevoza';
@@ -43,9 +43,9 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-			offers
+            offers
 		else
-			message...
+            message...
 		*/
 	}
 
@@ -58,7 +58,7 @@ Class SearchController extends Controller {
 		// get all objects to work with
 		$search = Search::find($params['id']);
 		if (!$search)
-			displayMessage('Pogrešan id.', 403);
+            displayMessage('Pogrešan id.', 403);
 		
 		$user = User::fullName($search->user_id);
 		$ride_requests = RideRequest::where('search_id', $search->id)->where('user_id', $search->user_id)->get();
@@ -74,13 +74,13 @@ Class SearchController extends Controller {
 		}
 
 		$search->deleteRecord();
-        echo json_encode($params['id']);
+        echo json_encode(['id'=>$params['id']]);
 
 		if (count($offer_regs) > 0) {
 			// notifications to searchers
 			$title = 'Brisanje potražnje prevoza';
 			$message = $user.' je obrisao zahtjev za prevozom...';
-			sendNotifications($title, $message, $offer_regs, $search, 'search');
+            sendNotifications($title, $message, $offer_regs, $search, 'search');
 		}
 
 		/*
@@ -117,7 +117,7 @@ Class SearchController extends Controller {
 		foreach ($ride_requests as $rideRequest) {
             $delete_request_regs = $rideRequest->deleteRequest();
 
-			if (isset($delete_request_regs) && !empty($delete_request_regs))
+            if (isset($delete_request_regs) && !empty($delete_request_regs))
                 $offer_regs_for_deleted_requests = array_merge($offer_regs_for_deleted_requests, $delete_request_regs);
 		}
 
@@ -137,7 +137,7 @@ Class SearchController extends Controller {
 		if (!$offers)
             exit(json_encode(array()));
 
-        echo json_encode($offers, JSON_UNESCAPED_UNICODE);
+        echo json_encode($offers['offers'], JSON_UNESCAPED_UNICODE);
 
 		// notification to offerers
 		$title = 'Izmjena potražnje prevoza';
@@ -146,9 +146,9 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-			offers
+            offers
 		else
-			message...
+            message...
 		*/
 	}
 
@@ -160,6 +160,10 @@ Class SearchController extends Controller {
 			$offer->user = User::fullName($offer->user_id);
 			$offer->date = date('d.M.Y.', strtotime($offer->date));
 			$offer->time = substr($offer->time, 0, 5).'h';
+
+			$route_array = explode(' - ', $offer->route);
+			$offer->from = $route_array[0];
+			$offer->to = end($route_array);
 			unset($offer->route);
 
             $resp['offers'][] = $offer;

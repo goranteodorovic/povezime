@@ -30,13 +30,13 @@ Class RideRequestController extends Controller {
 			$search = Search::find($rideRequest->search_id);
 			$offer = Offer::find($rideRequest->offer_id);
 
-			if($rideRequest->type == 'search')
-                $rideRequest->user = User::find($offer->user_id);
+			if($rideRequest->type == 'S')
+                $rideRequest->user_name = User::fullName($offer->user_id);
 			else
-                $rideRequest->user = User::find($search->user_id);
+                $rideRequest->user_name = User::fullName($search->user_id);
 
             $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
-			unset($rideRequest->user_id);
+			//unset($rideRequest->user_id);
 		}
 
 		echo json_encode($ride_requests, JSON_UNESCAPED_UNICODE);
@@ -61,19 +61,20 @@ Class RideRequestController extends Controller {
 
         $user = User::find($rideRequest->user_id);
         $type = $rideRequest->type;
-        if ($rideRequest->type == 'search')
+        if ($rideRequest->type == 'S')
             $obj = Search::find($rideRequest->search_id);
         else
             $obj = Offer::find($rideRequest->offer_id);
 
 		$delete_request_regs = $rideRequest->deleteRequest();
-        echo json_encode($params['id']);
+		echo json_encode(['id'=>$params['id']]);
 
 		if (!empty($delete_request_regs)) {
 			$title = 'Otkazivanje zahtjeva';
 			$message = $user.' je otkazao zahtjev za prevoz.';
 			sendNotifications($title, $message, $delete_request_regs, $obj, $type);
 		}
+
 		/*
 		if success
 			id
@@ -101,8 +102,8 @@ Class RideRequestController extends Controller {
 			displayMessage('Provjeriti mjesta ponude i potražnje!', 400);
 
 		// save request
-		$params['type'] = 'offer';
-		$params['answer'] = 'pending';
+		$params['type'] = 'O';
+		$params['answer'] = 'P';
 
 		$rideRequest = RideRequest::create($params);
 		if (!$rideRequest)
@@ -142,25 +143,27 @@ Class RideRequestController extends Controller {
 		if (!$user || !$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
-		if ($params['answer'] == 0) {
-			$request_answer = 'denied';
+		if ($params['answer'] == 'D') {
+			//$request_answer = 'D';
 			$fb_msg = 'odbio(la)';
 		} else {
 
 			if ($search->seats == 0 || $offer->seats < $search->seats) { 
 				$response_msg = 'Zahtjev više nije dostupan!';
-				$rideRequest->answer = 'denied';
+				//$rideRequest->answer = 'D';
+				$params['answer'] = 'D';
 			} else {
 				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
 				$search->updateRecord(['seats' => 0]);
 
-				$request_answer = 'accepted';
+				//$request_answer = 'A';
 				$fb_msg = 'prihvatio(la)';
 			}
 		}
 
-		// update riderequest
-		$rideRequest->updateRecord(['answer' => $request_answer]);
+		// update ride request
+        $rideRequest->updateRecord(['answer' => $params['answer']]);
+        echo json_encode(['id'=>$params['id']]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na ponuda prevoza';
@@ -169,12 +172,9 @@ Class RideRequestController extends Controller {
 			sendNotifications($title, $message, $offer_regs, $search, 'search');
 		}
 
-        $resp['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
-
 		/*
 		if success
-			message...
+			id
 		else
 			message...
 		*/
@@ -199,8 +199,8 @@ Class RideRequestController extends Controller {
 			displayMessage('Provjeriti mjesta ponude i potražnje!', 400);
 
 		// save request
-		$params['type'] = 'search';
-		$params['answer'] = 'pending';
+		$params['type'] = 'S';
+		$params['answer'] = 'P';
 
 		$rideRequest = RideRequest::create($params);
 		if (!$rideRequest)
@@ -240,25 +240,26 @@ Class RideRequestController extends Controller {
 		if (!$user || !$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
-		if ($params['answer'] == 0) {
-			$request_answer = 'denied';
+		if ($params['answer'] == 'D') {
+			//$request_answer = 'D';
 			$fb_msg = 'odbio(la)';
 		} else {
 
 			if ($search->seats == 0 || $offer->seats < $search->seats) { 
 				$response_msg = 'Zahtjev više nije dostupan!';
-				$rideRequest->answer = 'denied';
+				//$rideRequest->answer = 'D';
+                $params['answer'] = 'D';
 			} else {
 				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
 				$search->updateRecord(['seats' => 0]);
 
-				$request_answer = 'accepted';
+				//$request_answer = 'A';
 				$fb_msg = 'prihvatio(la)';
 			}
 		}
 
 		// update ride request
-		$rideRequest->updateRecord(['answer' => $request_answer]);
+		$rideRequest->updateRecord(['answer' => $params['answer']]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na potražnju prevoza';
@@ -267,12 +268,11 @@ Class RideRequestController extends Controller {
 			sendNotifications($title, $message, $search_regs, $offer, 'offer');
 		}
 
-        $resp['message'] = isset($response_msg) ? $response_msg : 'Zahtjev je prošao.';
-		echo json_encode($resp, JSON_UNESCAPED_UNICODE);
+        echo json_encode(['id'=>$params['id']]);
 
 		/*
 		if success
-			message...
+			id
 		else
 			message...
 		*/

@@ -21,10 +21,13 @@ function displayMessage($msg, $response_code = 200){
 }
 
 /* distance from point to point in km */
-function getDistance($lat1, $lon1, $lat2, $lon2) {
-	$rad = M_PI / 180;
-	$distance = acos(sin($lat2*$rad) * sin($lat1*$rad) + cos($lat2*$rad) * cos($lat1*$rad) * cos($lon2*$rad - $lon1*$rad)) * 6371;
-	return is_nan($distance) ? 0 : $distance;
+function getDistanceGeoKit($from, $to){
+    $math = new Geokit\Math();
+    $distance = $math->distanceHaversine($from, $to);
+    if($distance->kilometers() != null)
+        return $distance->kilometers();
+    else
+        return 0.001;
 }
 
 /* firebase notification */
@@ -89,17 +92,18 @@ function curlGetRequest($url){
 }
 
 /*function getCityName($latlng){
-	$cityName = '';
+    $cityName = '';
+    $api = 'AIzaSyDDvwpoPhOSNSn4W54Qq_XUxHpSbvOOpMc';
+    $string = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='.$latlng.'&key='.$api;
+    $jsonObj = json_decode(curlGetRequest($string));
+    foreach($jsonObj->results as $result){
+        $types = $result->address_components[0]->types;
 
-	while(empty($cityName)){
-		$jsonObj = json_decode(curlGetRequest('https://maps.googleapis.com/maps/api/geocode/json?latlng='.$latlng));
-		foreach($jsonObj->results as $result){
-			$types = $result->address_components[0]->types;
+        if($types[0] == 'locality' && $types[1] == 'political'){
+            $cityName = $result->address_components[0]->long_name;
+            break;
+        }
+    }
 
-			if($types[0] == 'locality' && $types[1] == 'political')
-                $cityName = $result->address_components[0]->long_name;
-		}
-	}
-	
-	return $cityName;
+    return !empty($cityName) ? $cityName : getCityName($latlng);
 }*/
