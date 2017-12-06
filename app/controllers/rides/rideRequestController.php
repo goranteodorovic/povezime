@@ -21,29 +21,46 @@ Class RideRequestController extends Controller {
 		$required = ['user_id'];
 		checkRequiredFields($required, $params);
 
-		$ride_requests = RideRequest::getAllByUserId($params['user_id']);
-		if (!isset($ride_requests) || count($ride_requests) == 0)
-            exit(json_encode(array()));
+		$ride_requests = RideRequest::where('user_id', $params['user_id'])->get();
 
-		foreach ($ride_requests as $key => $rideRequest) {
+        foreach ($ride_requests as $rideRequest) {
 
-			$search = Search::find($rideRequest->search_id);
-			$offer = Offer::find($rideRequest->offer_id);
+            $search = \App\Models\Search::find($rideRequest->search_id);
+            $search->date = date('d.M.Y.', strtotime($search->date));
+            unset($search->created_at, $search->updated_at, $search->seats_start);
 
-			if($rideRequest->type == 'S')
-                $rideRequest->user_name = User::fullName($offer->user_id);
-			else
-                $rideRequest->user_name = User::fullName($search->user_id);
+            $offer = \App\Models\Offer::find($rideRequest->offer_id);
+            $offer_route_array = explode(' - ', $offer->route);
+            $offer->from = $offer_route_array[0];
+            $offer->to = end($offer_route_array);
+            $offer->date = date('d.M.Y.', strtotime($offer->date));
+            $offer->time = substr($offer->time, 0, 5).'h';
 
-            $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
-			//unset($rideRequest->user_id);
-		}
+            $car = Car::find($offer->car_id);
+            $offer->car = $car->make.' '.$car->model;
+            unset($offer->created_at, $offer->updated_at, $offer->seats_start, $offer->car_id);
+
+            if ($rideRequest->type == 'S') {
+                $user = User::find($offer->user_id);
+            } else {
+                $user = User::find($search->user_id);
+            }
+            unset($user->created_at, $user->updated_at);
+            $rideRequest->user = $user;
+
+            unset($search->user_id, $offer->user_id);
+
+            $rideRequest->search = $search;
+            $rideRequest->offer = $offer;
+
+            unset($rideRequest->user_id, $rideRequest->search_id, $rideRequest->offer_id, $rideRequest->created_at, $rideRequest->updated_at);
+        }
 
 		echo json_encode($ride_requests, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			ride_requests
+			ride_requests []
 		else
 			message...
 		*/
@@ -109,6 +126,12 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!', 503);
 
+		$rideRequest->from = $search->from;
+		$rideRequest->to = $search->to;
+        $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
+        $rideRequest->user = User::fullName($search->user_id);
+        unset($rideRequest->search_id, $rideRequest->offer_id);
+
 		// send notification to searcher
 		$title = 'Zahtjev/ponuda prevoza';
 		$message = User::fullName($user->id).' vam je ponudio prevoz.';
@@ -119,7 +142,7 @@ Class RideRequestController extends Controller {
 
 		/*
 		if success
-			request
+			request (obj)
 		else
 			message...
 		*/
@@ -144,19 +167,16 @@ Class RideRequestController extends Controller {
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		if ($params['answer'] == 'D') {
-			//$request_answer = 'D';
 			$fb_msg = 'odbio(la)';
 		} else {
 
 			if ($search->seats == 0 || $offer->seats < $search->seats) { 
-				$response_msg = 'Zahtjev više nije dostupan!';
-				//$rideRequest->answer = 'D';
+				//$response_msg = 'Zahtjev više nije dostupan!';
 				$params['answer'] = 'D';
 			} else {
 				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
 				$search->updateRecord(['seats' => 0]);
 
-				//$request_answer = 'A';
 				$fb_msg = 'prihvatio(la)';
 			}
 		}
@@ -206,6 +226,13 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!', 503);
 
+        $offer_route_array = explode(' - ', $offer);
+        $rideRequest->from = $offer_route_array[0];
+        $rideRequest->to = end($offer_route_array);
+        $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
+        $rideRequest->user = User::fullName($offer->user_id);
+        unset($rideRequest->search_id, $rideRequest->offer_id);
+
 		// send notification to searcher
 		$title = 'Zahtjev/potražnja prevoza';
 		$message = User::fullName($user->id).' potražuje prevoz.';
@@ -216,7 +243,7 @@ Class RideRequestController extends Controller {
 
 		/*
 		if success
-			request
+			request (obj)
 		else
 			message...
 		*/
@@ -241,19 +268,16 @@ Class RideRequestController extends Controller {
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		if ($params['answer'] == 'D') {
-			//$request_answer = 'D';
 			$fb_msg = 'odbio(la)';
 		} else {
 
 			if ($search->seats == 0 || $offer->seats < $search->seats) { 
-				$response_msg = 'Zahtjev više nije dostupan!';
-				//$rideRequest->answer = 'D';
+				//$response_msg = 'Zahtjev više nije dostupan!';
                 $params['answer'] = 'D';
 			} else {
 				$offer->updateRecord(['seats' => $offer->seats - $search->seats]);
 				$search->updateRecord(['seats' => 0]);
 
-				//$request_answer = 'A';
 				$fb_msg = 'prihvatio(la)';
 			}
 		}

@@ -5,94 +5,113 @@ database name
 povezime
 
 end points and returned data
+returned data presented in {}
 ------------------
 User/firebaselogin
 
 required:	email, reg_id
+
 {id, name, surname, email, phone, viber, whatsapp, image, cars: [], regs: []}
 ------------------
 User/update
 
 -required:	email
 -optional:	name, surname, phone, viber(0/1), whatsapp(0/1), image
+
 {id, name, surname, email, phone, viber, whatsapp, image}
 ------------------
 Car/new
 
 -required:	email
 -optional:	make, model, seats, image
+
 {id, user_id, make, model, seats, image}
 ------------------
 Car/update
 
 -required:	id
 -optional:	make, model, seats, image
+
 {id, user_id, make, model, seats, image}
 ------------------
 Car/delete
 
 -required:	id
+
 {id}
 ------------------
 Search/ride
 
 -required:	user_id, from, to, seats, date (2017-09-29), one_day (0/1), luggage (0/1)
-{offers: []}
+
+{offers [id, user_id, date, time, seats, luggage, user, from, to]}
 ------------------
 Search/ride/cancel
 
 -required:	id
+
 {id}
 ------------------
 Search/ride/update
 
 -required:	id
 -optional:	from, to, seats, date, one_day, luggage
-{offers: []}
+
+{offers []}
+-same as search/ride
 ------------------
 Offer/ride
 
 required:	user_id, route, car_id, seats, date, time, luggage
-{searches: [], regs: [], firebase}
+
+{searches [id, user_id, from, to, date, one_day, seats, luggage, user]}
 ------------------
 Offer/ride/cancel
 
 -required:	id
+
 {id}
 ------------------
 Offer/ride/update
 
 -required:	id
 -optional:	route, car_id, seats, date, time, luggage
-{searches: []}
+
+{searches []}
+-same as offer/ride
 ------------------
 Ride/request/all
 
 -required:	user_id
-[{"id":4,"type":"O","search_id":7,"offer_id":1,"answer":"P","user_name":"Petar Petroviæ","date":"07.Dec.2017."}]
+
+[{id, type, answer, user (obj), search (obj), offer (obj)}]
 ------------------
 Ride/request/cancel
 
 -required:	id
+
 {id}
 ------------------
 Search/ride/request
 
 -required:	user_id, search_id, offer_id
-{id, user_id, search_id, offer_id, type, answer}
+
+{id, user_id, from, to, date, user (user name), type, answer}
 ------------------
 Search/ride/answer
 
 -required:	id, user_id, answer(A/D)
+
 {id}
 ------------------
 Offer/ride/request
 
 -required:	user_id, search_id, offer_id
-{id, user_id, search_id, offer_id, type, answer}
+
+{id, user_id, from, to, date, user (user name), type, answer}
 ------------------
 Offer/ride/answer
 
 -required:	id, user_id, answer(A/D)
-{id}
 
+{id}

@@ -34,3 +34,7 @@ $app->post('/offer/ride/request', 'RideRequestController:offerRideRequest');
 $app->post('/offer/ride/answer', 'RideRequestController:offerRideAnswer');
 $app->post('/search/ride/request', 'RideRequestController:searchRideRequest');
 $app->post('/search/ride/answer', 'RideRequestController:searchRideAnswer');
+
+$app->post('/test', function(){
+    //
+});

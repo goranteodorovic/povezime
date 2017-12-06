@@ -9,7 +9,20 @@ Class Offer extends Common {
 
 	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'updated_at'];
 
-    public static function getMatches($search){
+    public static function findById($id){
+        $offer = self::find($id);
+        if (!$offer)
+            return false;
+
+        $route_array = explode(' - ', $offer->route);
+        $offer->from = $route_array[0];
+        $offer->to = end($route_array);
+
+        unset($offer->created_at, $offer->updated_at);
+        return $offer;
+    }
+
+	public static function getMatches($search){
 
 		$offers = Offer::select('id', 'user_id', 'route', 'date', 'time', 'seats', 'luggage')
 		->where('seats', '>', 0)

@@ -43,7 +43,7 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-            offers
+            offers []
 		else
             message...
 		*/
@@ -146,7 +146,7 @@ Class SearchController extends Controller {
 
 		/*
 		if success
-            offers
+            offers []
 		else
             message...
 		*/
@@ -179,8 +179,8 @@ Class SearchController extends Controller {
 
         /*
         if success
-            offers
-            regs
+            offers []
+            regs []
         else
             false
         */

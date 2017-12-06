@@ -47,14 +47,10 @@ Class RideRequest extends Common {
 
 		/*
 		if success
-			regs
+			regs []
 		else
 			message...
 		*/
 	}
 
 }
-
-/*
- * 33, 36, 40
- */

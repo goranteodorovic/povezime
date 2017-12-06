@@ -11,7 +11,7 @@ Class Common extends Model {
 	protected $table;
 
 	public static function getAllByUserId($user_id){
-	//  return array of records / false
+	//  returns array of records
 		$records = self::where('user_id', $user_id)->get();
 
 		foreach ($records as $first_key => $record) {
@@ -22,12 +22,11 @@ Class Common extends Model {
 			unset($record->created_at, $record->updated_at);
 		}
 
-		return !empty($records) ? $records : false;
+		return $records;
 	}
 
 	public function updateRecord($params){
 	//  returns true / message
-
 		if (isset($params['id'])) { unset($params['id']); }
 		$collection = collect($this);
 
@@ -60,4 +59,14 @@ Class Common extends Model {
 		
 		return true;
 	}
+
+    public function getQueueableConnection()
+    {
+        // TODO: Implement getQueueableConnection() method.
+    }
+
+    public function resolveRouteBinding($value)
+    {
+        // TODO: Implement resolveRouteBinding() method.
+    }
 }

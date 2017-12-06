@@ -28,7 +28,7 @@ Class CarController extends Controller {
 
 		/*
 		if success
-			car
+			car (obj)
 		else
 			message...
 		*/
@@ -51,7 +51,7 @@ Class CarController extends Controller {
 
 		/*
 		if success
-			car
+			car (obj)
 		else
 			message...
 		*/

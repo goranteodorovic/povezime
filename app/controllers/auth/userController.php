@@ -42,7 +42,7 @@ Class UserController extends Controller {
 
 		/*
 		if success
-			user
+			user (obj)
 		else
 			messsage
 		*/
@@ -65,7 +65,7 @@ Class UserController extends Controller {
 
 		/*
 		if success
-			user
+			user (obj)
 		else
 			messsage
 		*/
