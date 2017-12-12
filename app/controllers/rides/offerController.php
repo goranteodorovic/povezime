@@ -33,7 +33,8 @@ Class OfferController extends Controller {
         if (!$searches)
             exit(json_encode(array()));
 
-        echo json_encode($searches['searches'], JSON_UNESCAPED_UNICODE);
+        $resp = ['offer_id' => $offer->id, 'searches' => $searches['searches']];
+        echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
@@ -43,7 +44,7 @@ Class OfferController extends Controller {
 
 		/*
 		if success
-			searches []
+			offer_id, searches []
 		else
 			message...
 		*/
@@ -137,7 +138,8 @@ Class OfferController extends Controller {
 		if (!$searches)
             exit(json_encode(array()));
 
-        echo json_encode($searches['searches'], JSON_UNESCAPED_UNICODE);
+        $resp = ['offer_id' => $offer->id, 'searches' => $searches['searches']];
+        echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
@@ -146,7 +148,7 @@ Class OfferController extends Controller {
 
 		/*
 		if success
-			searches
+			offer_id, searches []
 		else
 			message...
 		*/
@@ -158,11 +160,12 @@ Class OfferController extends Controller {
 		$regs = array();
 
 		foreach ($searches as $search) {
-			$search->user = User::fullName($search->user_id);
+		    $search->user = User::findSpecific($search->user_id);
 			$search->date = date('d.M.Y.', strtotime($search->date));
+			unset($search->user_id, $search->from, $search->to);
 
             $resp['searches'][] = $search;
-			$regs = array_merge($regs, Reg::where('user_id', $search->user_id)->pluck('reg_id')->all());
+			$regs = array_merge($regs, Reg::where('user_id', $search->user->id)->pluck('reg_id')->all());
 		}
 
 		if (empty($regs)) {

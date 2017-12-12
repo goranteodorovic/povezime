@@ -9,6 +9,16 @@ Class Search extends Common {
 
 	protected $fillable = ['user_id', 'from', 'to', 'date', 'one_day', 'seats', 'seats_start', 'luggage', 'updated_at'];
 
+	public static function findSpecific($id){
+	    $search = self::find($id);
+        $search->user = User::findSpecific($search->user_id);
+
+        $search->date = date('d.M.Y.', strtotime($search->date));
+
+	    unset($search->user_id, $search->seats_start, $search->created_at, $search->updated_at);
+	    return $search;
+    }
+
 	public static function getMatches($offer){
 	//  returns $searches / false		
 		$offer_route_arr = explode(" - ", $offer->route);
@@ -46,9 +56,6 @@ Class Search extends Common {
 				unset($searches[$index]);
 		}
 
-		if (!empty($searches))
-			return $searches;
-		else
-			return false;
+		return !empty($searches) ? $searches : false;
 	}
 }

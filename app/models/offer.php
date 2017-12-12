@@ -9,6 +9,24 @@ Class Offer extends Common {
 
 	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'updated_at'];
 
+    public static function findSpecific($id){
+        $offer = self::find($id);
+        $offer->user = User::findSpecific($offer->user_id);
+
+        $offer_route_array = explode(' - ', $offer->route);
+        $offer->from = $offer_route_array[0];
+        $offer->to = end($offer_route_array);
+
+        $offer->date = date('d.M.Y.', strtotime($offer->date));
+        $offer->time = substr($offer->time, 0, 5).'h';
+
+        $car = Car::find($offer->car_id);
+        $offer->car = $car->make.' '.$car->model;
+
+        unset($offer->user_id, $offer->car_id, $offer->seats_start, $offer->route, $offer->created_at, $offer->updated_at);
+        return $offer;
+    }
+
     public static function findById($id){
         $offer = self::find($id);
         if (!$offer)
@@ -59,9 +77,6 @@ Class Offer extends Common {
 				unset($offers[$index]);
 		}
 
-		if (!empty($offers))
-			return $offers;
-		else
-			return false;
+        return !empty($offers) ? $offers : false;
 	}
 }

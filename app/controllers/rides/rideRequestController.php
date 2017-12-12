@@ -24,36 +24,22 @@ Class RideRequestController extends Controller {
 		$ride_requests = RideRequest::where('user_id', $params['user_id'])->get();
 
         foreach ($ride_requests as $rideRequest) {
+            $rideRequest->type = ($rideRequest->type == 'S') ? 'search' : 'offer';
 
-            $search = \App\Models\Search::find($rideRequest->search_id);
-            $search->date = date('d.M.Y.', strtotime($search->date));
-            unset($search->created_at, $search->updated_at, $search->seats_start);
+            if ($rideRequest->answer == 'A') { $rideRequest->answer = 'acepted'; }
+            else if ($rideRequest->answer == 'D') { $rideRequest->answer = 'denied'; }
+            else { $rideRequest->answer = 'pending'; }
 
-            $offer = \App\Models\Offer::find($rideRequest->offer_id);
-            $offer_route_array = explode(' - ', $offer->route);
-            $offer->from = $offer_route_array[0];
-            $offer->to = end($offer_route_array);
-            $offer->date = date('d.M.Y.', strtotime($offer->date));
-            $offer->time = substr($offer->time, 0, 5).'h';
-
-            $car = Car::find($offer->car_id);
-            $offer->car = $car->make.' '.$car->model;
-            unset($offer->created_at, $offer->updated_at, $offer->seats_start, $offer->car_id);
-
-            if ($rideRequest->type == 'S') {
-                $user = User::find($offer->user_id);
-            } else {
-                $user = User::find($search->user_id);
-            }
-            unset($user->created_at, $user->updated_at);
-            $rideRequest->user = $user;
-
-            unset($search->user_id, $offer->user_id);
+            $search = Search::findSpecific($rideRequest->search_id);
+            $offer = Offer::findSpecific($rideRequest->offer_id);
 
             $rideRequest->search = $search;
             $rideRequest->offer = $offer;
+            $rideRequest->date = $offer->date;
+            unset($rideRequest->search_id, $rideRequest->offer_id);
 
             unset($rideRequest->user_id, $rideRequest->search_id, $rideRequest->offer_id, $rideRequest->created_at, $rideRequest->updated_at);
+
         }
 
 		echo json_encode($ride_requests, JSON_UNESCAPED_UNICODE);
@@ -109,8 +95,8 @@ Class RideRequestController extends Controller {
 
 		// find objects to work with
 		$user = User::find($params['user_id']);
-		$search = Search::find($params['search_id']);
-		$offer = Offer::find($params['offer_id']);
+		$search = Search::findSpecific($params['search_id']);
+		$offer = Offer::findSpecific($params['offer_id']);
 		if (!$user || !$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
@@ -126,17 +112,17 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!', 503);
 
-		$rideRequest->from = $search->from;
-		$rideRequest->to = $search->to;
-        $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
-        $rideRequest->user = User::fullName($search->user_id);
+		$rideRequest->type = 'offer';
+        $rideRequest->answer = 'pending';
+        $rideRequest->search = $search;
+		$rideRequest->offer = $offer;
         unset($rideRequest->search_id, $rideRequest->offer_id);
 
 		// send notification to searcher
 		$title = 'Zahtjev/ponuda prevoza';
 		$message = User::fullName($user->id).' vam je ponudio prevoz.';
-		$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-		sendNotifications($title, $message, $search_regs, $offer, 'offer');
+		$search_regs = Reg::where('user_id', $search->user->id)->pluck('reg_id')->all();
+		sendNotifications($title, $message, $search_regs, Offer::find($params['offer_id']), 'offer');
 
         echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
 
@@ -209,8 +195,8 @@ Class RideRequestController extends Controller {
 
 		// find objects to work with
 		$user = User::find($params['user_id']);
-		$search = Search::find($params['search_id']);
-		$offer = Offer::find($params['offer_id']);
+		$search = Search::findSpecific($params['search_id']);
+		$offer = Offer::findSpecific($params['offer_id']);
 		if (!$user || !$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
@@ -226,18 +212,17 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Čuvanje zahtjeva neuspješno!', 503);
 
-        $offer_route_array = explode(' - ', $offer);
-        $rideRequest->from = $offer_route_array[0];
-        $rideRequest->to = end($offer_route_array);
-        $rideRequest->date = date('d.M.Y.', strtotime($offer->date));
-        $rideRequest->user = User::fullName($offer->user_id);
+        $rideRequest->type = 'search';
+        $rideRequest->answer = 'pending';
+        $rideRequest->search = $search;
+        $rideRequest->offer = $offer;
         unset($rideRequest->search_id, $rideRequest->offer_id);
 
 		// send notification to searcher
 		$title = 'Zahtjev/potražnja prevoza';
 		$message = User::fullName($user->id).' potražuje prevoz.';
 		$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-		sendNotifications($title, $message, $offer_regs, $search, 'search');
+		sendNotifications($title, $message, $offer_regs, Search::find($params['search_id']), 'search');
 
         echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
 

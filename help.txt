@@ -44,7 +44,7 @@ Search/ride
 
 -required:	user_id, from, to, seats, date (2017-09-29), one_day (0/1), luggage (0/1)
 
-{offers [id, user_id, date, time, seats, luggage, user, from, to]}
+{offers [id, user (obj), date, time, seats, luggage, from, to]}
 ------------------
 Search/ride/cancel
 
@@ -64,7 +64,7 @@ Offer/ride
 
 required:	user_id, route, car_id, seats, date, time, luggage
 
-{searches [id, user_id, from, to, date, one_day, seats, luggage, user]}
+{searches [id, user (obj), from, to, date, one_day, seats, luggage]}
 ------------------
 Offer/ride/cancel
 
@@ -96,7 +96,7 @@ Search/ride/request
 
 -required:	user_id, search_id, offer_id
 
-{id, user_id, from, to, date, user (user name), type, answer}
+{id, type, answer, search, offer}
 ------------------
 Search/ride/answer
 
@@ -108,7 +108,7 @@ Offer/ride/request
 
 -required:	user_id, search_id, offer_id
 
-{id, user_id, from, to, date, user (user name), type, answer}
+{id, type, answer, search, offer}
 ------------------
 Offer/ride/answer
 
