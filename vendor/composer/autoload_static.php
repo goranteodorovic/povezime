@@ -57,6 +57,7 @@ class ComposerStaticInitc6ec809d6d3cab9535d115b81f02f94e
         ),
         'F' => 
         array (
+            'Firebase\\JWT\\' => 13,
             'FastRoute\\' => 10,
         ),
         'D' => 
@@ -153,6 +154,10 @@ class ComposerStaticInitc6ec809d6d3cab9535d115b81f02f94e
         'GeoThing\\' => 
         array (
             0 => __DIR__ . '/..' . '/dericcain/geo-things/src',
+        ),
+        'Firebase\\JWT\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/firebase/php-jwt/src',
         ),
         'FastRoute\\' => 
         array (

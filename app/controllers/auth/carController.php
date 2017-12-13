@@ -35,7 +35,7 @@ Class CarController extends Controller {
 	}
 
 	public function update($request, $response){
-	//	required: id
+	//	required: id, user_id
 	//	optional: make, model, seats, image
 		$params = $request->getParams();
 		$required = ['id'];
@@ -58,7 +58,7 @@ Class CarController extends Controller {
 	}
 
 	public function delete($request, $response){
-	// 	required: id
+	// 	required: id, user_id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);

@@ -33,25 +33,29 @@ Class OfferController extends Controller {
         if (!$searches)
             exit(json_encode(array()));
 
-        $resp = ['offer_id' => $offer->id, 'searches' => $searches['searches']];
+        $offer->user = User::findSpecific($params['user_id']);
+        unset($offer->user_id);
+        $resp = ['offer' => $offer, 'searches' => $searches['searches']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
-		$user = User::fullName($offer->user_id);
+		$user = User::fullName($offer->user->id);
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
+		$firebase = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
+		//echo ' -FIREBASE- ';
+        //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			offer_id, searches []
+			offer (obj), searches []
 		else
 			message...
 		*/
 	}
 
 	public function offerRideCancel($request, $response){
-	// 	required: id
+	// 	required: id, user_id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
@@ -93,7 +97,7 @@ Class OfferController extends Controller {
 	}
 
 	public function offerRideUpdate($request, $response){
-	//  required: id
+	//  required: id, user_id
 	//  optional: user_id, route, car_id, seats, date, time, luggage
 		$params = $request->getParams();
 		$required = ['id'];
@@ -130,7 +134,9 @@ Class OfferController extends Controller {
 		if (!empty($search_regs_for_deleted_requests)) {
 			$title = 'Izmjena ponude prevoza';
 			$message = $user.' je izmijenio ponudu prevoza za '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
-            sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
+            $firebase = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
+            //echo ' -FIREBASE- ';
+            //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		// check matched searches
@@ -138,17 +144,21 @@ Class OfferController extends Controller {
 		if (!$searches)
             exit(json_encode(array()));
 
-        $resp = ['offer_id' => $offer->id, 'searches' => $searches['searches']];
+        $offer->user = User::findSpecific($offer->user_id);
+        unset($offer->user_id);
+        $resp = ['offer' => $offer, 'searches' => $searches['searches']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
 		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
-		sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
+		$firebase = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
+        //echo ' -FIREBASE- ';
+        //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-			offer_id, searches []
+			offer (obj), searches []
 		else
 			message...
 		*/
@@ -161,8 +171,10 @@ Class OfferController extends Controller {
 
 		foreach ($searches as $search) {
 		    $search->user = User::findSpecific($search->user_id);
+		    unset($search->user_id);
+
 			$search->date = date('d.M.Y.', strtotime($search->date));
-			unset($search->user_id, $search->from, $search->to);
+			unset($search->from, $search->to);
 
             $resp['searches'][] = $search;
 			$regs = array_merge($regs, Reg::where('user_id', $search->user->id)->pluck('reg_id')->all());

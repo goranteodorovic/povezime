@@ -5,36 +5,40 @@ $app->get('/', 'HomeController:index')->setName('home');
 /*-----------------------------------------------------*/
 /* User Auth */
 $app->post('/user/firebaselogin', 'UserController:firebaseLogin');
-$app->post('/user/update', 'UserController:update');
 
-/*-----------------------------------------------------*/
-/* Car */
-$app->post('/car/new', 'CarController:addNew');
-$app->post('/car/update', 'CarController:update');
-$app->post('/car/delete', 'CarController:delete');
+$app->group('', function(){
+    $this->post('/user/update', 'UserController:update');
 
-/*-----------------------------------------------------*/
-/* Ride Offers */
-$app->post('/offer/ride', 'OfferController:offerRide');
-$app->post('/offer/ride/update', 'OfferController:offerRideUpdate');
-$app->post('/offer/ride/cancel', 'OfferController:offerRideCancel');
+    /*-----------------------------------------------------*/
+    /* Car */
+    $this->post('/car/new', 'CarController:addNew');
+    $this->post('/car/update', 'CarController:update');
+    $this->post('/car/delete', 'CarController:delete');
 
-/*-----------------------------------------------------*/
-/* Ride Searches */
-$app->post('/search/ride', 'SearchController:searchRide');
-$app->post('/search/ride/update', 'SearchController:searchRideUpdate');
-$app->post('/search/ride/cancel', 'SearchController:searchRideCancel');
+    /*-----------------------------------------------------*/
+    /* Ride Offers */
+    $this->post('/offer/ride', 'OfferController:offerRide');
+    $this->post('/offer/ride/update', 'OfferController:offerRideUpdate');
+    $this->post('/offer/ride/cancel', 'OfferController:offerRideCancel');
 
-/*-----------------------------------------------------*/
-/* Requests */
-$app->post('/ride/request/all', 'RideRequestController:getAllRequests');
-$app->post('/ride/request/cancel', 'RideRequestController:cancelRequest');
+    /*-----------------------------------------------------*/
+    /* Ride Searches */
+    $this->post('/search/ride', 'SearchController:searchRide');
+    $this->post('/search/ride/update', 'SearchController:searchRideUpdate');
+    $this->post('/search/ride/cancel', 'SearchController:searchRideCancel');
 
-$app->post('/offer/ride/request', 'RideRequestController:offerRideRequest');
-$app->post('/offer/ride/answer', 'RideRequestController:offerRideAnswer');
-$app->post('/search/ride/request', 'RideRequestController:searchRideRequest');
-$app->post('/search/ride/answer', 'RideRequestController:searchRideAnswer');
+    /*-----------------------------------------------------*/
+    /* Requests */
+    $this->post('/ride/request/all', 'RideRequestController:getAllRequests');
+    $this->post('/ride/request/cancel', 'RideRequestController:cancelRequest');
 
-$app->post('/test', function(){
-    //
-});
+    $this->post('/offer/ride/request', 'RideRequestController:offerRideRequest');
+    $this->post('/offer/ride/answer', 'RideRequestController:offerRideAnswer');
+    $this->post('/search/ride/request', 'RideRequestController:searchRideRequest');
+    $this->post('/search/ride/answer', 'RideRequestController:searchRideAnswer');
+
+    $this->post('/test', function() {
+        echo 'TEST';
+    });
+
+})->add(new App\Middleware\AuthMiddleware);

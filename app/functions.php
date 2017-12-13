@@ -17,7 +17,7 @@ function displayMessage($msg, $response_code = 200){
         http_response_code($response_code);
     }
     $resp['message'] = $msg;
-    exit(json_encode($resp, JSON_UNESCAPED_UNICODE));
+    exit(json_encode($resp, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
 /* distance from point to point in km */
@@ -33,15 +33,28 @@ function getDistanceGeoKit($from, $to){
 /* firebase notification */
 function sendNotifications($title, $message, $reg_ids, $object, $type){
 	// configure payload data
+
+    if (isset($object->user_id))
+        $user_id = $object->user_id;
+    else if (isset($object->user->id))
+        $user_id = $object->user->id;
+    else
+        displayMessage('Greška u firebase notifikaciji, nedostaje user_id...');
+
 	$route = clone $object;
-	$route->date = date('d.M.Y.', strtotime($object->date));
+	if (strpos($route->date, '-'))
+	    $route->date = date('d.M.Y.', strtotime($object->date));
+
 	unset($route->user_id, $route->seats_start, $route->created_at, $route->updated_at);
 
-	if($type == 'offer'){
-		$route->time = substr($object->time, 0, 5);
+	if ($type == 'offer'){
+        if (strlen($route->time) > 6)
+            $route->time = substr($object->time, 0, 5);
+
 		unset($route->route, $route->car_id);
 
-		$car = Car::select('make', 'model')->where('id', $object->user_id)->first();
+		$car = Car::select('make', 'model')->where('id', $user_id)->first();
+		$route->car = $car->make.' '.$car->model;
 	} else
 		unset($route->from, $route->to);
 
@@ -49,24 +62,18 @@ function sendNotifications($title, $message, $reg_ids, $object, $type){
 	$firebase = new Firebase();
 	$push = new Push();
 	
-	$payload = new stdClass();
-	$payload->user = User::fullName($object->user_id);
-	if($type == 'offer'){ $payload->car = $car->make.' '.$car->model; }
-	$payload->route = $route;
-	//$payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
-
 	$push->setTitle($title);
 	$push->setMessage($message);
 	$push->setImage('');
 	$push->setIsBackground(FALSE);
-	$push->setPayload($payload);
+	$push->setPayload($route);
 
 	$json = $push->getPush();
 	$reg_ids = json_encode(array_unique($reg_ids));
 	$fb_response = $firebase->sendMultiple($reg_ids, $json);
 
 	//return $fb_response;
-    $resp = ['payload' => $payload, 'response' => $fb_response];
+    $resp = ['payload' => $route, 'response' => $fb_response];
 	return $resp;
 }
 

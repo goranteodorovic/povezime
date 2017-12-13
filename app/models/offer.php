@@ -7,23 +7,26 @@ use App\Models\Common;
 Class Offer extends Common {
 	protected $table = 'offers';
 
-	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'updated_at'];
+	protected $fillable = ['user_id', 'route', 'car_id', 'seats', 'seats_start', 'date', 'time', 'luggage', 'from_name', 'to_name', 'updated_at'];
 
     public static function findSpecific($id){
         $offer = self::find($id);
         $offer->user = User::findSpecific($offer->user_id);
+        unset($offer->user_id);
 
-        $offer_route_array = explode(' - ', $offer->route);
+        /*$offer_route_array = explode(' - ', $offer->route);
         $offer->from = $offer_route_array[0];
-        $offer->to = end($offer_route_array);
+        $offer->to = end($offer_route_array);*/
+        unset($offer->route);
 
         $offer->date = date('d.M.Y.', strtotime($offer->date));
         $offer->time = substr($offer->time, 0, 5).'h';
 
         $car = Car::find($offer->car_id);
         $offer->car = $car->make.' '.$car->model;
+        unset($offer->car_id);
 
-        unset($offer->user_id, $offer->car_id, $offer->seats_start, $offer->route, $offer->created_at, $offer->updated_at);
+        unset($offer->seats_start, $offer->created_at, $offer->updated_at);
         return $offer;
     }
 
@@ -42,7 +45,7 @@ Class Offer extends Common {
 
 	public static function getMatches($search){
 
-		$offers = Offer::select('id', 'user_id', 'route', 'date', 'time', 'seats', 'luggage')
+		$offers = Offer::select('id', 'user_id', 'route', 'from_name', 'to_name', 'date', 'time', 'seats', 'luggage')
 		->where('seats', '>', 0)
 		->where('seats', '>=', $search->seats);
 		// filter by luggage

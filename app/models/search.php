@@ -7,15 +7,16 @@ use App\Models\Common;
 Class Search extends Common {
 	protected $table = 'searches';
 
-	protected $fillable = ['user_id', 'from', 'to', 'date', 'one_day', 'seats', 'seats_start', 'luggage', 'updated_at'];
+	protected $fillable = ['user_id', 'from', 'to', 'date', 'one_day', 'seats', 'seats_start', 'luggage', 'from_name', 'to_name', 'updated_at'];
 
 	public static function findSpecific($id){
 	    $search = self::find($id);
         $search->user = User::findSpecific($search->user_id);
+        unset($search->user_id);
 
         $search->date = date('d.M.Y.', strtotime($search->date));
-
-	    unset($search->user_id, $search->seats_start, $search->created_at, $search->updated_at);
+	    unset($search->seats_start, $search->created_at, $search->updated_at);
+        unset($search->from, $search->to);
 	    return $search;
     }
 
@@ -27,7 +28,7 @@ Class Search extends Common {
 		$minus_one = date('Y-m-d', strtotime("-1 day", strtotime($offer->date)));
 
 		// filter by seats, partly-date
-		$searches = self::select('id', 'user_id', 'from', 'to', 'date', 'one_day', 'seats', 'luggage')
+		$searches = self::select('id', 'user_id', 'from', 'to', 'from_name', 'to_name', 'date', 'one_day', 'seats', 'luggage')
 		->where('seats', '>', 0)
 		->where('seats', '<=', $offer->seats)
 		->whereBetween('date', [$minus_one, $plus_one]);

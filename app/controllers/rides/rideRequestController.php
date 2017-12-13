@@ -35,10 +35,9 @@ Class RideRequestController extends Controller {
 
             $rideRequest->search = $search;
             $rideRequest->offer = $offer;
-            $rideRequest->date = $offer->date;
             unset($rideRequest->search_id, $rideRequest->offer_id);
 
-            unset($rideRequest->user_id, $rideRequest->search_id, $rideRequest->offer_id, $rideRequest->created_at, $rideRequest->updated_at);
+            unset($rideRequest->user_id, $rideRequest->created_at, $rideRequest->updated_at);
 
         }
 
@@ -46,14 +45,14 @@ Class RideRequestController extends Controller {
 
 		/*
 		if success
-			ride_requests []
+			ride_requests [ rideRequest(id, type, answer, search Obj, offer Obj)]
 		else
 			message...
 		*/
 	}
 
     public function cancelRequest($request, $response){
-	//	required: id
+	//	required: id, user_id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
@@ -75,7 +74,9 @@ Class RideRequestController extends Controller {
 		if (!empty($delete_request_regs)) {
 			$title = 'Otkazivanje zahtjeva';
 			$message = $user.' je otkazao zahtjev za prevoz.';
-			sendNotifications($title, $message, $delete_request_regs, $obj, $type);
+			$firebase = sendNotifications($title, $message, $delete_request_regs, $obj, $type);
+            echo ' -FIREBASE- ';
+            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		/*
@@ -118,13 +119,15 @@ Class RideRequestController extends Controller {
 		$rideRequest->offer = $offer;
         unset($rideRequest->search_id, $rideRequest->offer_id);
 
+        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
+
 		// send notification to searcher
 		$title = 'Zahtjev/ponuda prevoza';
 		$message = User::fullName($user->id).' vam je ponudio prevoz.';
 		$search_regs = Reg::where('user_id', $search->user->id)->pluck('reg_id')->all();
-		sendNotifications($title, $message, $search_regs, Offer::find($params['offer_id']), 'offer');
-
-        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
+		$firebase = sendNotifications($title, $message, $search_regs, $offer, 'offer');
+        echo ' -FIREBASE- ';
+        echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -175,7 +178,9 @@ Class RideRequestController extends Controller {
 			$title = 'Odgovor na ponuda prevoza';
 			$message = User::fullName($search->user_id).' je '.$fb_msg.' vaš zahtjev za ponudu prevoza.';
 			$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-			sendNotifications($title, $message, $offer_regs, $search, 'search');
+			$firebase = sendNotifications($title, $message, $offer_regs, $search, 'search');
+            echo ' -FIREBASE- ';
+            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		/*
@@ -218,13 +223,15 @@ Class RideRequestController extends Controller {
         $rideRequest->offer = $offer;
         unset($rideRequest->search_id, $rideRequest->offer_id);
 
+        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
+
 		// send notification to searcher
 		$title = 'Zahtjev/potražnja prevoza';
 		$message = User::fullName($user->id).' potražuje prevoz.';
 		$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
-		sendNotifications($title, $message, $offer_regs, Search::find($params['search_id']), 'search');
-
-        echo json_encode($rideRequest, JSON_UNESCAPED_UNICODE);
+		$firebase = sendNotifications($title, $message, $offer_regs, $search, 'search');
+        echo ' -FIREBASE- ';
+        echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -269,15 +276,16 @@ Class RideRequestController extends Controller {
 
 		// update ride request
 		$rideRequest->updateRecord(['answer' => $params['answer']]);
+        echo json_encode(['id'=>$params['id']]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na potražnju prevoza';
 			$message = User::fullName($offer->user_id).' je '.$fb_msg.' vaš zahtjev za potražnju prevoza.';
 			$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
-			sendNotifications($title, $message, $search_regs, $offer, 'offer');
+			$firebase = sendNotifications($title, $message, $search_regs, $offer, 'offer');
+            echo ' -FIREBASE- ';
+            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
-
-        echo json_encode(['id'=>$params['id']]);
 
 		/*
 		if success

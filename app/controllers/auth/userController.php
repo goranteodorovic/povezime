@@ -25,6 +25,9 @@ Class UserController extends Controller {
 		} else
 			$user_id = $user->id;
 
+        $jwt = $this->tokenGenerate($user->id, $user->email);
+        $user->token = $jwt;
+
         // inserting reg id into db
 		$found_reg = Reg::where('reg_id', $params['reg_id'])->first();
 		if (!$found_reg) {
@@ -49,13 +52,13 @@ Class UserController extends Controller {
 	}
 
 	public function update($request, $response){
-	//	required:	id
+	//	required:	user_id
 	//	optional:	name, surname, phone, viber, whatsapp, image
 		$params = $request->getParams();
-		$required = ['id'];
+		$required = ['user_id'];
 		checkRequiredFields($required, $params);
 
-		$user = User::find($params['id']);
+		$user = User::find($params['user_id']);
 		if(!$user)
 			displayMessage('Pogrešan id.', 403);
 
@@ -70,4 +73,26 @@ Class UserController extends Controller {
 			messsage
 		*/
 	}
+
+    public function tokenGenerate($user_id, $email) {
+        global $container;
+        $key = $container->get('settings')['jwtKey'];
+        $token = array(
+            "iss" => "povezime.app",
+            "iat" => time(),
+            "data" => [
+                "user_id" => $user_id,
+                "email" => $email
+            ]
+        );
+
+        $jwt = \Firebase\JWT\JWT::encode($token, $key);
+
+        $token = \App\Models\Token::create(['user_id'=>$user_id, 'token'=>$jwt]);
+        if (!$token->id)
+            displayMessage('Spremanje tokena neuspješno.', 503);
+
+        $jwt = 'Bearer '.$jwt;
+        return $jwt;
+    }
 }

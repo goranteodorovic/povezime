@@ -33,25 +33,28 @@ Class SearchController extends Controller {
 		if (!$offers)
             exit(json_encode(array()));
 
-        $resp = ['search_id' => $search->id, 'offers' => $offers['offers']];
+        $search->user = User::findSpecific($params['user_id']);
+        unset($search->user_id);
+        $resp = ['search' => $search, 'offers' => $offers['offers']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to offers
 		$title = 'Potražnja prevoza';
-		$user = User::fullName($search->user_id);
+		$user = User::fullName($search->user->id);
 		$message = $user.' je objavio da traži prevoz, koji se podudara sa vašom ponudom.';
-		sendNotifications($title, $message, $offers['regs'], $search, 'search');
-
+		$firebase = sendNotifications($title, $message, $offers['regs'], $search, 'search');
+        //echo ' -FIREBASE- ';
+		//echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		/*
 		if success
-            search_id, offers []
+            search (obj), offers []
 		else
             message...
 		*/
 	}
 
 	public function searchRideCancel($request, $response){
-	// 	required: id
+	// 	required: id, user_id
 		$params = $request->getParams();
 		$required = ['id'];
 		checkRequiredFields($required, $params);
@@ -81,7 +84,8 @@ Class SearchController extends Controller {
 			// notifications to searchers
 			$title = 'Brisanje potražnje prevoza';
 			$message = $user.' je obrisao zahtjev za prevozom...';
-            sendNotifications($title, $message, $offer_regs, $search, 'search');
+            $firebase = sendNotifications($title, $message, $offer_regs, $search, 'search');
+            print_r($firebase);
 		}
 
 		/*
@@ -93,7 +97,7 @@ Class SearchController extends Controller {
 	}
 
 	public function searchRideUpdate($request, $response){
-	//  required: id
+	//  required: id, user_id
 	//  optional: user_id, from, to, seats, date, one_day, luggage
 		$params = $request->getParams();
 		$required = ['id'];
@@ -130,7 +134,9 @@ Class SearchController extends Controller {
 		if (!empty($offer_regs_for_deleted_requests)) {
 			$title = 'Izmjena potražnje prevoza';
 			$message = $user.' je izmijenio potražnju prevoza za: '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
-            sendNotifications($title, $message, $offer_regs_for_deleted_requests, $search, 'search');
+            $firebase = sendNotifications($title, $message, $offer_regs_for_deleted_requests, $search, 'search');
+            //echo ' -FIREBASE- DELETED REQUESTS ';
+            //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		// check matched offers
@@ -138,17 +144,21 @@ Class SearchController extends Controller {
 		if (!$offers)
             exit(json_encode(array()));
 
-        $resp = ['search_id' => $search->id, 'offers' => $offers['offers']];
+        $search->user = User::findSpecific($search->user_id);
+        unset($search->user_id);
+        $resp = ['search' => $search, 'offers' => $offers['offers']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
 		// notification to offerers
 		$title = 'Izmjena potražnje prevoza';
 		$message = $user.' je objavio da traži prevoz, koji se podudara sa vašom ponudom.';
-		sendNotifications($title, $message, $offers['regs'], $search, 'search');
+		$firebase = sendNotifications($title, $message, $offers['regs'], $search, 'search');
+        //echo ' -FIREBASE- ';
+        //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
-            search_id, offers []
+            search (obj), offers []
 		else
             message...
 		*/
@@ -160,13 +170,15 @@ Class SearchController extends Controller {
 
 		foreach ($offers as $offer) {
 			$offer->user = User::findSpecific($offer->user_id);
-			$offer->date = date('d.M.Y.', strtotime($offer->date));
-			$offer->time = substr($offer->time, 0, 5).'h';
+			unset($offer->user_id);
 
-			$route_array = explode(' - ', $offer->route);
+			/*$route_array = explode(' - ', $offer->route);
 			$offer->from = $route_array[0];
-			$offer->to = end($route_array);
-			unset($offer->user_id, $offer->route);
+			$offer->to = end($route_array);*/
+			unset($offer->route);
+
+            $offer->date = date('d.M.Y.', strtotime($offer->date));
+            $offer->time = substr($offer->time, 0, 5).'h';
 
             $resp['offers'][] = $offer;
 			$regs = array_merge($regs, Reg::where('user_id', $offer->user->id)->pluck('reg_id')->all());

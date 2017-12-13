@@ -4,6 +4,8 @@ C:\xampp\htdocs\slim-api\povezime
 database name
 povezime
 
+user_id is required for every route but firebaselogin
+
 end points and returned data
 returned data presented in {}
 ------------------
@@ -11,7 +13,7 @@ User/firebaselogin
 
 required:	email, reg_id
 
-{id, name, surname, email, phone, viber, whatsapp, image, cars: [], regs: []}
+{id, name, surname, email, phone, viber, whatsapp, image, cars: [], regs: [], token}
 ------------------
 User/update
 
