@@ -40,8 +40,8 @@ Class OfferController extends Controller {
 
 		// notification to searches
 		$title = 'Ponuda prevoza';
-		$user = User::fullName($offer->user->id);
-		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
+		$user_name = User::fullName($offer->user->id);
+		$message = $user_name.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
 		$firebase = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
 		//echo ' -FIREBASE- ';
         //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
@@ -65,7 +65,6 @@ Class OfferController extends Controller {
 		if (!$offer)
 			displayMessage('Pogrešan id.', 403);
 		
-		$user = User::fullName($offer->user_id);
 		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
 
 		$search_regs = array();
@@ -84,7 +83,8 @@ Class OfferController extends Controller {
 		if (count($search_regs) > 0) {
 			// notifications to searchers
 			$title = 'Brisanje ponude prevoza';
-			$message = $user.' je obrisao prevoz. Potražite novi!';
+            $user_name = User::fullName($offer->user_id);
+			$message = $user_name.' je obrisao prevoz. Potražite novi!';
 			sendNotifications($title, $message, $search_regs, $offer, 'offer');
 		}
 
@@ -113,8 +113,7 @@ Class OfferController extends Controller {
 		else
 			$params['seats'] = $offer->seats_start;
 
-		$user = User::fullName($offer->user_id);
-		$ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
+        $ride_requests = RideRequest::where('offer_id', $offer->id)->where('user_id', $offer->user_id)->get();
 
 		$search_regs_for_deleted_requests = array();
 		
@@ -130,10 +129,12 @@ Class OfferController extends Controller {
 		$beforeUpdate = clone $offer;
 		$offer->updateRecord($params);
 
-		// notification about deleted requests
+        $user_name = User::fullName($offer->user_id);
+
+        // notification about deleted requests
 		if (!empty($search_regs_for_deleted_requests)) {
 			$title = 'Izmjena ponude prevoza';
-			$message = $user.' je izmijenio ponudu prevoza za '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
+			$message = $user_name.' je izmijenio ponudu prevoza za '.date('d.M.Y.', strtotime($beforeUpdate->date)).'. Vaš zahtjev za prevozom je obrisan!';
             $firebase = sendNotifications($title, $message, $search_regs_for_deleted_requests, $offer, 'offer');
             //echo ' -FIREBASE- ';
             //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
@@ -151,7 +152,7 @@ Class OfferController extends Controller {
 
 		// notification to searches
 		$title = 'Izmjena ponude prevoza';
-		$message = $user.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
+		$message = $user_name.' je objavio da nudi prevoz, koji se podudara sa vašom potražnjom.';
 		$firebase = sendNotifications($title, $message, $searches['regs'], $offer, 'offer');
         //echo ' -FIREBASE- ';
         //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
@@ -173,7 +174,7 @@ Class OfferController extends Controller {
 		    $search->user = User::findSpecific($search->user_id);
 		    unset($search->user_id);
 
-			$search->date = date('d.M.Y.', strtotime($search->date));
+			//$search->date = date('d.M.Y.', strtotime($search->date));
 			unset($search->from, $search->to);
 
             $resp['searches'][] = $search;

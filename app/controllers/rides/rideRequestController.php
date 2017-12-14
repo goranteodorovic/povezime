@@ -61,7 +61,6 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Pogrešan id.', 403);
 
-        $user = User::find($rideRequest->user_id);
         $type = $rideRequest->type;
         if ($rideRequest->type == 'S')
             $obj = Search::find($rideRequest->search_id);
@@ -73,10 +72,11 @@ Class RideRequestController extends Controller {
 
 		if (!empty($delete_request_regs)) {
 			$title = 'Otkazivanje zahtjeva';
-			$message = $user.' je otkazao zahtjev za prevoz.';
+            $user_name = User::fullName($rideRequest->user_id);
+            $message = $user_name.' je otkazao zahtjev za prevoz.';
 			$firebase = sendNotifications($title, $message, $delete_request_regs, $obj, $type);
-            echo ' -FIREBASE- ';
-            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
+            //echo ' -FIREBASE- ';
+            //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		/*
@@ -95,10 +95,9 @@ Class RideRequestController extends Controller {
 		checkRequiredFields($required, $params);
 
 		// find objects to work with
-		$user = User::find($params['user_id']);
 		$search = Search::findSpecific($params['search_id']);
 		$offer = Offer::findSpecific($params['offer_id']);
-		if (!$user || !$search || !$offer)
+		if (!$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		// check if searches still needs a ride
@@ -123,11 +122,12 @@ Class RideRequestController extends Controller {
 
 		// send notification to searcher
 		$title = 'Zahtjev/ponuda prevoza';
-		$message = User::fullName($user->id).' vam je ponudio prevoz.';
+        $user_name = User::fullName($params['user_id']);
+		$message = $user_name.' vam je ponudio prevoz.';
 		$search_regs = Reg::where('user_id', $search->user->id)->pluck('reg_id')->all();
 		$firebase = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-        echo ' -FIREBASE- ';
-        echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
+        //echo ' -FIREBASE- ';
+        //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -149,10 +149,9 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Pogrešan id.', 403);
 
-		$user = User::find($params['user_id']);
 		$search = Search::find($rideRequest->search_id);
 		$offer = Offer::find($rideRequest->offer_id);
-		if (!$user || !$search || !$offer)
+		if (!$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		if ($params['answer'] == 'D') {
@@ -176,11 +175,12 @@ Class RideRequestController extends Controller {
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na ponuda prevoza';
-			$message = User::fullName($search->user_id).' je '.$fb_msg.' vaš zahtjev za ponudu prevoza.';
+            $user_name = User::fullName($params['user_id']);
+			$message = $user_name.' je '.$fb_msg.' vaš zahtjev za ponudu prevoza.';
 			$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
 			$firebase = sendNotifications($title, $message, $offer_regs, $search, 'search');
-            echo ' -FIREBASE- ';
-            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
+            //echo ' -FIREBASE- ';
+            //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		/*
@@ -199,10 +199,10 @@ Class RideRequestController extends Controller {
 		checkRequiredFields($required, $params);
 
 		// find objects to work with
-		$user = User::find($params['user_id']);
+		//$user = User::find($params['user_id']);
 		$search = Search::findSpecific($params['search_id']);
 		$offer = Offer::findSpecific($params['offer_id']);
-		if (!$user || !$search || !$offer)
+		if (!$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		// check if searches still needs a ride
@@ -227,11 +227,12 @@ Class RideRequestController extends Controller {
 
 		// send notification to searcher
 		$title = 'Zahtjev/potražnja prevoza';
-		$message = User::fullName($user->id).' potražuje prevoz.';
+        $user_name = User::fullName($params['user_id']);
+		$message = $user_name.' potražuje prevoz.';
 		$offer_regs = Reg::where('user_id', $offer->user_id)->pluck('reg_id')->all();
 		$firebase = sendNotifications($title, $message, $offer_regs, $search, 'search');
-        echo ' -FIREBASE- ';
-        echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
+        //echo ' -FIREBASE- ';
+        //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 
 		/*
 		if success
@@ -253,10 +254,10 @@ Class RideRequestController extends Controller {
 		if (!$rideRequest)
 			displayMessage('Pogrešan id!', 403);
 
-		$user = User::find($params['user_id']);
+
 		$search = Search::find($rideRequest->search_id);
 		$offer = Offer::find($rideRequest->offer_id);
-		if (!$user || !$search || !$offer)
+		if (!$search || !$offer)
 			displayMessage('Pogrešan id. Provjeriti korisnika, ponudu i potražnju!', 400);
 
 		if ($params['answer'] == 'D') {
@@ -280,11 +281,12 @@ Class RideRequestController extends Controller {
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na potražnju prevoza';
-			$message = User::fullName($offer->user_id).' je '.$fb_msg.' vaš zahtjev za potražnju prevoza.';
+            $user_name = User::fullName($params['user_id']);
+			$message = $user_name.' je '.$fb_msg.' vaš zahtjev za potražnju prevoza.';
 			$search_regs = Reg::where('user_id', $search->user_id)->pluck('reg_id')->all();
 			$firebase = sendNotifications($title, $message, $search_regs, $offer, 'offer');
-            echo ' -FIREBASE- ';
-            echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
+            //echo ' -FIREBASE- ';
+            //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
 		/*
