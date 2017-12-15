@@ -5,6 +5,7 @@ $app->get('/', 'HomeController:index')->setName('home');
 /*-----------------------------------------------------*/
 /* User Auth */
 $app->post('/user/firebaselogin', 'UserController:firebaseLogin');
+$app->post('/user/validate', 'UserController:validate');
 
 $app->group('', function(){
     $this->post('/user/update', 'UserController:update');

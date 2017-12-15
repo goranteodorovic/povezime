@@ -26,7 +26,7 @@ Class RideRequestController extends Controller {
         foreach ($ride_requests as $rideRequest) {
             $rideRequest->type = ($rideRequest->type == 'S') ? 'search' : 'offer';
 
-            if ($rideRequest->answer == 'A') { $rideRequest->answer = 'acepted'; }
+            if ($rideRequest->answer == 'A') { $rideRequest->answer = 'accepted'; }
             else if ($rideRequest->answer == 'D') { $rideRequest->answer = 'denied'; }
             else { $rideRequest->answer = 'pending'; }
 
@@ -68,7 +68,8 @@ Class RideRequestController extends Controller {
             $obj = Offer::find($rideRequest->offer_id);
 
 		$delete_request_regs = $rideRequest->deleteRequest();
-		echo json_encode(['id'=>$params['id']]);
+		echo $params['id'];
+		//echo json_encode(['id'=>$params['id']]);
 
 		if (!empty($delete_request_regs)) {
 			$title = 'Otkazivanje zahtjeva';
@@ -171,7 +172,8 @@ Class RideRequestController extends Controller {
 
 		// update ride request
         $rideRequest->updateRecord(['answer' => $params['answer']]);
-        echo json_encode(['id'=>$params['id']]);
+		echo $params['id'];
+        //echo json_encode(['id'=>$params['id']]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na ponuda prevoza';
@@ -277,7 +279,8 @@ Class RideRequestController extends Controller {
 
 		// update ride request
 		$rideRequest->updateRecord(['answer' => $params['answer']]);
-        echo json_encode(['id'=>$params['id']]);
+        echo $params['id'];
+        //echo json_encode(['id'=>$params['id']]);
 
 		if (isset($fb_msg)) {
 			$title = 'Odgovor na potražnju prevoza';

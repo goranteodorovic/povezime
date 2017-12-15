@@ -28,13 +28,14 @@ Class SearchController extends Controller {
 		if(!$search->id)
 			displayMessage('Spremanje potražnje neuspješno.', 503);
 
-		// check for offers
-		$offers = $this->getOfferMatches($search);
-		if (!$offers)
-            exit(json_encode(array()));
-
         $search->user = User::findSpecific($params['user_id']);
         unset($search->user_id);
+
+        // check for offers
+		$offers = $this->getOfferMatches($search);
+		if (!$offers)
+            exit(json_encode(array('search' => $search, 'offers' => array())));
+
         $resp = ['search' => $search, 'offers' => $offers['offers']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
@@ -77,7 +78,7 @@ Class SearchController extends Controller {
 		}
 
 		$search->deleteRecord();
-        echo json_encode(['id'=>$params['id']]);
+        echo $params['id'];
 
 		if (count($offer_regs) > 0) {
 			// notifications to searchers
@@ -139,13 +140,15 @@ Class SearchController extends Controller {
             //echo json_encode($firebase, JSON_UNESCAPED_UNICODE);
 		}
 
+        $search->user = User::findSpecific($search->user_id);
+        unset($search->user_id);
+
 		// check matched offers
 		$offers = $this->getOfferMatches($search);
 		if (!$offers)
-            exit(json_encode(array()));
+            exit(json_encode(array('search' => $search, 'offers' => array())));
 
-        $search->user = User::findSpecific($search->user_id);
-        unset($search->user_id);
+
         $resp = ['search' => $search, 'offers' => $offers['offers']];
         echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 
